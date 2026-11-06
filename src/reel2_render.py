@@ -183,6 +183,9 @@ def scene_cam(i, t, z_wide=Z0):
     return c
 
 
+CHIP_TEXT = "NOW AT EZY PZY CONVENIENCE"   # store line under each product name
+
+
 def tag(canvas, t, t_in, t_out, name, glow):
     if t < t_in or t > t_out + 0.3:
         return
@@ -194,7 +197,7 @@ def tag(canvas, t, t_in, t_out, name, glow):
     draw_text(canvas, name, "InterDisplay-BlackItalic.otf", size, 540 - (1 - a_in) * 50, 222 + yoff, alpha=a,
               reveal=ease_out_cubic(lin(t, t_in, t_in + 0.35)), glow=glow, glow_r=22, glow_s=0.9, shadow=0.55,
               blur=(1 - a_out) * 8)
-    draw_text(canvas, "NOW AT EZY PZY", "InterDisplay-SemiBold.otf", 30, 540, 222 + size * 0.6 + 20 + yoff,
+    draw_text(canvas, CHIP_TEXT, "InterDisplay-SemiBold.otf", 30, 540, 222 + size * 0.6 + 20 + yoff,
               alpha=a * ease_out_cubic(lin(t, t_in + 0.1, t_in + 0.4)), tracking=0.22, shadow=0.5,
               glow=glow, glow_r=10, glow_s=0.35)
 

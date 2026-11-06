@@ -9,6 +9,7 @@ its own scene and only one product is ever on screen at a time.
 | **Reel 1** | Bucked Up Lightly Carbonated Protein: Cherry Limeade, Rainbow Candy, Green Apple, Banana Pineapple | 24.5 s | `output/ezy_pzy_reel_1080x1920.mp4`, `output/ezy_pzy_reel_thumbnail.jpg`, `output/storyboard.jpg` |
 | **Reel 2** | Crush Pineapple, Crush Big Troppa Punch, Crush Peach, Fanta Strawberry, Fanta Pineapple, Fanta Mango, Fanta Crimson Sour Cherry | 28.5 s | `output/reel2/ezy_pzy_reel2_1080x1920.mp4`, `output/reel2/ezy_pzy_reel2_thumbnail.jpg`, `output/reel2/storyboard.jpg` |
 | **Reel 2, Two Locations edition** | Same as Reel 2, with a new closing scene showing the store logo picture and both locations | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Two_Locations_Reel.mp4`, `output/reel2/Two_Locations_ending_storyboard.jpg` |
+| **Reel 2, Final** (latest) | The Two Locations edition with the store name corrected to "EZY PZY CONVENIENCE" in every drink scene | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Final_Reel.mp4` |
 
 Both videos are 1080×1920, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
 
@@ -55,6 +56,13 @@ The new closing scene (24.0–30.0 s) is synced to the original end-card hits:
 | 29.6–30.0 s | Fade to black | Ring-out |
 
 The complete card is on screen together for about 4 s, and the addresses are readable for about 4.4 s. No postal code was added for the second address. Rebuild with `TWO_LOCATIONS=1 ./build_reel2.sh`, or run `python3 src/reel2_two_locations.py` after Reel 2's frames exist.
+
+### Final edition (`src/reel2_final.py`)
+
+This is a text-only correction to the Two Locations edition. The line under each product name in the seven drink scenes changes from "NOW AT EZY PZY" to **"NOW AT EZY PZY CONVENIENCE"**, with the same font, size, spacing, position and animation. No other on-screen text contained the store name: the end card already shows the full name through the logo picture.
+- Only the 244 frames where that line is visible were re-rendered. The renderer is deterministic: with the old text it reproduces the original frames pixel-for-pixel, and the script checks this before building.
+- The Two Locations MP4 is split at its keyframes. GOPs (groups of frames between keyframes) without a changed frame are copied bit-for-bit: 469 frames, including the whole end card. GOPs containing a changed frame are re-encoded with the original settings and matched to the original GOP's bit budget, so compression quality stays consistent.
+- The audio is identical (decoded samples match). Duration (30.0 s), resolution, frame rate and file size (48.3 MB) are unchanged.
 
 ---
 
