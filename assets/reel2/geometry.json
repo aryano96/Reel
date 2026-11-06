@@ -1,0 +1,65 @@
+{
+ "01_crush_pineapple": {
+  "left": 277.0,
+  "right": 837.0,
+  "top": 151,
+  "bottom": 1247,
+  "cx": 557.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "02_crush_big_troppa_punch": {
+  "left": 272.0,
+  "right": 830.0,
+  "top": 97,
+  "bottom": 1211,
+  "cx": 551.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "03_crush_peach": {
+  "left": 289.0,
+  "right": 829.0,
+  "top": 147,
+  "bottom": 1207,
+  "cx": 559.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "04_fanta_strawberry": {
+  "left": 274.0,
+  "right": 847.0,
+  "top": 82,
+  "bottom": 1238,
+  "cx": 560.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "05_fanta_pineapple": {
+  "left": 274.0,
+  "right": 818.0,
+  "top": 134,
+  "bottom": 1225,
+  "cx": 546.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "06_fanta_mango": {
+  "left": 294.0,
+  "right": 830.0,
+  "top": 162,
+  "bottom": 1188,
+  "cx": 562.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "07_fanta_crimson_sour_cherry": {
+  "left": 267.0,
+  "right": 829.0,
+  "top": 122,
+  "bottom": 1239,
+  "cx": 548.0,
+  "w": 1122,
+  "h": 1402
+ }
+}

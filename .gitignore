@@ -1,3 +1,4 @@
 output/build/
+output/build2/
 __pycache__/
 *.pyc

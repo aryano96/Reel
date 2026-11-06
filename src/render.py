@@ -881,21 +881,23 @@ def end_layout():
 EL = end_layout()
 
 
-def end_card(t, fi):
+def end_card(t, fi, T=TL, leaks=None):
+    FINAL = getattr(T, "END_FINAL", 23.0)
     post = dict(flash=0.0, ca=0.0, grain=0.014)
-    e = t - TL.END_START
-    shift = 1800 * (1 - ease_out_cubic(lin(t, TL.END_START, TL.END_START + 0.28)))
+    e = t - T.END_START
+    shift = 1800 * (1 - ease_out_cubic(lin(t, T.END_START, T.END_START + 0.28)))
     canvas = radial_bg((0.07, 0.06, 0.13), (0.004, 0.004, 0.012), 540, 860, 1000, 1300, 1.2).copy()
     # drifting light leaks in the four flavour colours
-    leaks = [((0.45, 1.0, 0.2), 120, 380), ((0.45, 0.3, 1.0), 980, 520), ((0.3, 0.85, 0.8), 160, 1500), ((0.3, 0.7, 1.0), 950, 1650)]
+    if leaks is None:
+        leaks = [((0.45, 1.0, 0.2), 120, 380), ((0.45, 0.3, 1.0), 980, 520), ((0.3, 0.85, 0.8), 160, 1500), ((0.3, 0.7, 1.0), 950, 1650)]
     for i, (col, x, y) in enumerate(leaks):
         add_glow(canvas, x + 90 * np.sin(e * 0.5 + i), y + 70 * np.cos(e * 0.4 + i * 2) + shift, 620, col, 0.16)
-    god_rays(canvas, t, 540, 700 + shift, GOLD, 0.11 + 0.10 * decay(t, TL.END_NAME, 0.5), n=18, speed=0.03, sharp=8)
-    add_glow(canvas, 540, 760 + shift, 760, GOLD, 0.18 * smooth(lin(t, TL.END_NAME, TL.END_NAME + 0.6)))
+    god_rays(canvas, t, 540, 700 + shift, GOLD, 0.11 + 0.10 * decay(t, T.END_NAME, 0.5), n=18, speed=0.03, sharp=8)
+    add_glow(canvas, 540, 760 + shift, 760, GOLD, 0.18 * smooth(lin(t, T.END_NAME, T.END_NAME + 0.6)))
     bokeh(canvas, t, 31, 18, [(0.5, 1.0, 0.3), (0.55, 0.4, 1.0), (0.35, 0.9, 0.85), (0.35, 0.75, 1.0), GOLD], inten=0.09, rmin=30, rmax=90, speed=14)
     dust(canvas, t, 21, 150, (1.0, 0.85, 0.5), inten=0.7, rmin=2, rmax=6, vy=-40)
     # anamorphic gold flare as the name lands
-    fl = decay(t, TL.END_NAME + 0.1, 0.45) if t >= TL.END_NAME + 0.1 else 0.0
+    fl = decay(t, T.END_NAME + 0.1, 0.45) if t >= T.END_NAME + 0.1 else 0.0
     if fl > 0.01:
         add_glow(canvas, 540, 700 + shift, 900, (1.0, 0.85, 0.55), 0.55 * fl, sx=1.0, sy=0.035)
         add_glow(canvas, 540, 700 + shift, 300, (1.0, 0.95, 0.85), 0.5 * fl, sx=1.0, sy=0.1)
@@ -909,11 +911,11 @@ def end_card(t, fi):
     adv = [f.getlength(ch) for ch in NAME]
     total = sum(adv)
     x = 540 - total / 2
-    fin = TL.END_NAME + 0.06 * len(NAME) + 0.35
-    final_punch = 1 + 0.035 * decay(t, 23.0, 0.25) if t >= 23.0 else 1.0
+    fin = T.END_NAME + 0.06 * len(NAME) + 0.35
+    final_punch = 1 + 0.035 * decay(t, FINAL, 0.25) if t >= FINAL else 1.0
     if t < fin:
         for i, (ch, a) in enumerate(zip(NAME, adv)):
-            ti = TL.END_NAME + i * 0.06
+            ti = T.END_NAME + i * 0.06
             k = ease_out_expo(lin(t, ti, ti + 0.32))
             if ch != " " and k > 0:
                 draw_text(canvas, ch, "InterDisplay-Black.otf", nsize, x + a / 2, ny - 60 * (1 - k), alpha=k,
@@ -922,9 +924,9 @@ def end_card(t, fi):
             x += a
     else:
         info = draw_text(canvas, NAME, "InterDisplay-Black.otf", nsize, 540, ny, scale=final_punch,
-                         grad=((1, 1, 1), (1.0, 0.88, 0.62)), glow=GOLD, glow_r=30, glow_s=0.55 + 0.25 * decay(t, 23.0, 0.3) if t >= 23 else 0.55)
+                         grad=((1, 1, 1), (1.0, 0.88, 0.62)), glow=GOLD, glow_r=30, glow_s=0.55 + 0.25 * decay(t, FINAL, 0.3) if t >= FINAL else 0.55)
         # shine sweeps
-        for s in TL.END_SHINES:
+        for s in T.END_SHINES:
             if s <= t < s + 0.7:
                 x0, y0, w, h, a = info
                 pos = lerp(-0.3, 1.3, ease_in_out((t - s) / 0.7))
@@ -933,14 +935,14 @@ def end_card(t, fi):
                 band = np.exp(-((xs + 0.25 * ys - pos) / 0.06) ** 2)
                 blend_add(canvas, (a * band * 0.9)[..., None] * np.array([1, 1, 1], np.float32), x0, y0)
     # sub-title with tracking reveal
-    k = ease_out_cubic(lin(t, TL.END_SUB, TL.END_SUB + 0.45))
+    k = ease_out_cubic(lin(t, T.END_SUB, T.END_SUB + 0.45))
     if k > 0:
         tr = lerp(0.9, 0.42, k)
         size = EL["sub_size"]
         draw_text(canvas, SUB, "InterDisplay-SemiBold.otf", size, 540, 878 + yo, alpha=k, tracking=round(tr, 2) if k < 1 else 0.42,
                   scale=min(1.0, lerp(0.8, 1.0, k)), glow=GOLD, glow_r=14, glow_s=0.3, blur=(1 - k) * 6)
     # gold rule
-    k = ease_in_out(lin(t, TL.END_RULE, TL.END_RULE + 0.4))
+    k = ease_in_out(lin(t, T.END_RULE, T.END_RULE + 0.4))
     if k > 0:
         hw = 230 * k
         y = int(965 + yo)
@@ -952,22 +954,22 @@ def end_card(t, fi):
         add_glow(canvas, 540 - hw, y, 40, (1, 0.95, 0.8), 0.6 * (1 - k))
     # address
     for j, (txt, yy) in enumerate([(ADDR1, 1052), (ADDR2, 1128)]):
-        tj = TL.END_ADDR + j * 0.1
+        tj = T.END_ADDR + j * 0.1
         k = ease_out_cubic(lin(t, tj, tj + 0.4))
         if k > 0:
             draw_text(canvas, txt, "InterDisplay-Medium.otf", EL["addr_size"], 540, yy + yo + 26 * (1 - k), alpha=k * 0.95,
                       blur=(1 - k) * 5, shadow=0.4)
     # map-pin dot accents
     # CTA pill
-    k = ease_out_back(lin(t, TL.END_CTA, TL.END_CTA + 0.38), 2.2)
-    ka = lin(t, TL.END_CTA, TL.END_CTA + 0.15)
+    k = ease_out_back(lin(t, T.END_CTA, T.END_CTA + 0.38), 2.2)
+    ka = lin(t, T.END_CTA, T.END_CTA + 0.15)
     if ka > 0:
         cs = EL["cta_size"]
         f2 = fx.font("InterDisplay-Black.otf", cs)
         tw = max(f2.getlength(CTA1), f2.getlength(CTA2))
         pw, ph = tw + 110, cs * 2.55
         cy = 1318 + yo
-        pulse = 1 + 0.02 * np.sin(max(0, t - TL.END_CTA - 0.4) * 5.5) * (t > TL.END_CTA + 0.4)
+        pulse = 1 + 0.02 * np.sin(max(0, t - T.END_CTA - 0.4) * 5.5) * (t > T.END_CTA + 0.4)
         sc = max(0.01, k) * pulse
         pad = 30
         lw, lh = int(pw * sc) + 2 * pad, int(ph * sc) + 2 * pad
@@ -984,7 +986,7 @@ def end_card(t, fi):
         blend_add(canvas, glow[..., None] * np.array(GOLD, np.float32), int(540 - lw / 2), int(cy - lh / 2))
         blend_over(canvas, col * a[..., None], a, int(540 - lw / 2), int(cy - lh / 2))
         # shine across pill
-        sp = lin(t, TL.END_CTA + 0.5, TL.END_CTA + 1.2)
+        sp = lin(t, T.END_CTA + 0.5, T.END_CTA + 1.2)
         if 0 < sp < 1:
             xs = np.arange(lw, dtype=np.float32)[None, :] / lw
             band = np.exp(-((xs - lerp(-0.2, 1.2, sp)) / 0.05) ** 2) * pm * 0.6
@@ -996,14 +998,14 @@ def end_card(t, fi):
     if shift > 1:
         canvas = vblur(canvas, shift * 0.12)
     # slow cinematic push-in on the whole card
-    zs = 1 + 0.04 * ease_in_out(lin(t, TL.END_START + 0.3, TL.DURATION))
+    zs = 1 + 0.04 * ease_in_out(lin(t, T.END_START + 0.3, T.DURATION))
     M = np.float32([[zs, 0, 540 - zs * 540], [0, zs, 960 - zs * 960]])
     canvas = cv2.warpAffine(canvas, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-    post["flash"] = 0.85 * (1 - ease_out_cubic(lin(t, TL.END_START, TL.END_START + 0.2)))
-    post["flash"] += 0.18 * decay(t, TL.END_NAME, 0.06) + 0.12 * decay(t, 23.0, 0.08) if t >= 23.0 else 0.18 * decay(t, TL.END_NAME, 0.06)
+    post["flash"] = 0.85 * (1 - ease_out_cubic(lin(t, T.END_START, T.END_START + 0.2)))
+    post["flash"] += 0.18 * decay(t, T.END_NAME, 0.06) + 0.12 * decay(t, FINAL, 0.08) if t >= FINAL else 0.18 * decay(t, T.END_NAME, 0.06)
     post["flash_color"] = (1.0, 0.95, 0.85)
-    post["ca"] = 6 * decay(t, TL.END_NAME, 0.12)
-    fade = 1 - smooth(lin(t, TL.END_FADE, TL.DURATION - 1.0 / FPS))
+    post["ca"] = 6 * decay(t, T.END_NAME, 0.12)
+    fade = 1 - smooth(lin(t, T.END_FADE, T.DURATION - 1.0 / FPS))
     post["fade"] = fade
     return canvas, post
 
