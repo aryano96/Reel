@@ -53,6 +53,7 @@ def candidate_frames():
 
 
 def _check(fi):
+    R2.CHIP_STYLE = "text"
     R2.CHIP_TEXT = NEW_TEXT
     new = R2.render_frame(fi)
     old = cv2.imread(os.path.join(SRC_FRAMES, f"{fi:05d}.png"))
@@ -124,6 +125,7 @@ def main(encode_only=False):
     os.makedirs(SEGS)
 
     # 0) determinism guard: old text must reproduce the original frames exactly
+    R2.CHIP_STYLE = "text"
     R2.CHIP_TEXT = OLD_TEXT
     for fi in (110, 400, 650):
         a = R2.render_frame(fi)
@@ -187,7 +189,7 @@ def splice(changed):
     assert len(b) == N, f"frame count {len(b)} != {N}"
     copied = [fi for g, (s, e) in enumerate(gops) for fi in range(s, e) if not any(s <= c < e for c in chs)]
     same = sum(a[fi] == b[fi] for fi in copied)
-    print(f"verify: {len(b)} frames; {same}/{len(copied)} frames outside updated GOPs decode identical to the Two Locations reel")
+    print(f"verify: {len(b)} frames; {same}/{len(copied)} frames outside updated GOPs decode identical to the source reel")
     print("wrote", OUT_MP4)
 
 

@@ -9,7 +9,8 @@ its own scene and only one product is ever on screen at a time.
 | **Reel 1** | Bucked Up Lightly Carbonated Protein: Cherry Limeade, Rainbow Candy, Green Apple, Banana Pineapple | 24.5 s | `output/ezy_pzy_reel_1080x1920.mp4`, `output/ezy_pzy_reel_thumbnail.jpg`, `output/storyboard.jpg` |
 | **Reel 2** | Crush Pineapple, Crush Big Troppa Punch, Crush Peach, Fanta Strawberry, Fanta Pineapple, Fanta Mango, Fanta Crimson Sour Cherry | 28.5 s | `output/reel2/ezy_pzy_reel2_1080x1920.mp4`, `output/reel2/ezy_pzy_reel2_thumbnail.jpg`, `output/reel2/storyboard.jpg` |
 | **Reel 2, Two Locations edition** | Same as Reel 2, with a new closing scene showing the store logo picture and both locations | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Two_Locations_Reel.mp4`, `output/reel2/Two_Locations_ending_storyboard.jpg` |
-| **Reel 2, Final** (latest) | The Two Locations edition with the store name corrected to "EZY PZY CONVENIENCE" in every drink scene | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Final_Reel.mp4` |
+| **Reel 2, Final** | The Two Locations edition with the store name corrected to "EZY PZY CONVENIENCE" in every drink scene | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Final_Reel.mp4` |
+| **Reel 2, Logo Final** (latest) | The Final Reel with the store-name text line under each product name replaced by the store logo | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Logo_Final_Reel.mp4` |
 
 Both videos are 1080×1920, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
 
@@ -63,6 +64,12 @@ This is a text-only correction to the Two Locations edition. The line under each
 - Only the 244 frames where that line is visible were re-rendered. The renderer is deterministic: with the old text it reproduces the original frames pixel-for-pixel, and the script checks this before building.
 - The Two Locations MP4 is split at its keyframes. GOPs (groups of frames between keyframes) without a changed frame are copied bit-for-bit: 469 frames, including the whole end card. GOPs containing a changed frame are re-encoded with the original settings and matched to the original GOP's bit budget, so compression quality stays consistent.
 - The audio is identical (decoded samples match). Duration (30.0 s), resolution, frame rate and file size (48.3 MB) are unchanged.
+
+### Logo Final edition (`src/reel2_logo_final.py`)
+
+The text line "NOW AT EZY PZY CONVENIENCE" under each product name, in all seven drink scenes, is replaced by the supplied store logo (`assets/brand/ezy_pzy_logo.jpg`), centred where the text was. The logo is shown exactly as designed on a small rounded white badge, with only its empty white margin trimmed. A white badge keeps the black "CONVENIENCE" lettering readable on the dark scenes. It has a soft shadow and a thin gold edge, matching the end card. It uses the line's existing timing with a subtle zoom-in and a single light shine.
+
+The build method is the same as the Final edition. The script checks that the renderer reproduces the Final Reel's frames exactly, then re-renders only the 244 frames showing the line. GOPs without a changed frame are copied bit-for-bit (469 frames, including the whole end card), and the rest are re-encoded to the original bit budget. The audio is identical, and duration, resolution and size are unchanged.
 
 ---
 

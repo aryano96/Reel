@@ -183,7 +183,63 @@ def scene_cam(i, t, z_wide=Z0):
     return c
 
 
-CHIP_TEXT = "NOW AT EZY PZY CONVENIENCE"   # store line under each product name
+CHIP_TEXT = "NOW AT EZY PZY CONVENIENCE"   # store line under each product name (text style)
+CHIP_STYLE = "logo"     # "text": single text line; "logo": the store logo badge
+LOGO_PATH = os.path.join(ROOT, "assets", "brand", "ezy_pzy_logo.jpg")
+LOGO_CROP = (24, 49, 1041, 402)     # trims empty white margin only - the logo itself is untouched
+LOGO_H = 90
+
+
+@lru_cache(maxsize=2)
+def logo_badge(h=LOGO_H):
+    """The supplied logo picture on a small rounded white badge (premultiplied RGBA layers)."""
+    img = np.asarray(Image.open(LOGO_PATH).convert("RGB")).astype(np.float32) / 255
+    x0, y0, x1, y1 = LOGO_CROP
+    crop = img[y0:y1, x0:x1]
+    w = int(round(h * crop.shape[1] / crop.shape[0]))
+    pic = cv2.resize(crop, (w, h), interpolation=cv2.INTER_AREA)
+    pad, r, S = 34, 12, 16
+    m = np.zeros((h + 2 * pad, w + 2 * pad), np.float32)
+    a0, b0, a1, b1 = pad, pad, pad + w - 1, pad + h - 1
+    cv2.rectangle(m, ((a0 + r) * S, b0 * S), ((a1 - r) * S, b1 * S), 1.0, -1, cv2.LINE_AA, 4)
+    cv2.rectangle(m, (a0 * S, (b0 + r) * S), (a1 * S, (b1 - r) * S), 1.0, -1, cv2.LINE_AA, 4)
+    for cx, cy in ((a0 + r, b0 + r), (a1 - r, b0 + r), (a0 + r, b1 - r), (a1 - r, b1 - r)):
+        cv2.circle(m, (cx * S, cy * S), r * S, 1.0, -1, cv2.LINE_AA, 4)
+    rgb = np.zeros((m.shape[0], m.shape[1], 3), np.float32)
+    rgb[pad:pad + h, pad:pad + w] = pic
+    edge = np.clip((cv2.GaussianBlur(m, (0, 0), 1.0) - cv2.GaussianBlur(cv2.erode(m, np.ones((3, 3), np.uint8)), (0, 0), 1.0)) * 2, 0, 1)
+    return dict(rgb=rgb, a=m, edge=edge, shadow=cv2.GaussianBlur(m, (0, 0), 9), glow=cv2.GaussianBlur(m, (0, 0), 18),
+                w=w, h=h, pw=m.shape[1], ph=m.shape[0])
+
+
+def draw_logo_row(canvas, t, t_in, a, a_out, yoff, glow):
+    """The store logo badge, centred under the product name (replaces the text line)."""
+    if a * ease_out_cubic(lin(t, t_in + 0.1, t_in + 0.4)) <= 0.002:
+        return
+    B = logo_badge()
+    cy = 304 + yoff
+    k = ease_out_expo(lin(t, t_in + 0.12, t_in + 0.55))
+    al = a * k
+    if al <= 0.002:
+        return
+    sc = lerp(1.15, 1.0, k)
+    lx = 540.0
+    M = np.float32([[sc, 0, lx - sc * B["pw"] / 2], [0, sc, cy - sc * B["ph"] / 2]])
+    warp = lambda img: cv2.warpAffine(img, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+    sh = np.roll(warp(B["shadow"]), 6, axis=0) * 0.55 * al
+    canvas *= 1 - sh[..., None]
+    canvas += warp(B["glow"])[..., None] * np.array([1.0, 0.95, 0.85], np.float32) * 0.22 * al
+    lay = warp(np.dstack([B["rgb"] * B["a"][..., None], B["a"]]))
+    if k < 0.98 or a_out < 1:
+        lay = cv2.GaussianBlur(lay, (0, 0), 0.2 + 5 * (1 - k) + 6 * (1 - a_out))
+    blend_over(canvas, lay[..., :3] * al, np.clip(lay[..., 3], 0, 1) * al)
+    canvas += warp(B["edge"])[..., None] * np.array(R.GOLD, np.float32) * 0.7 * al
+    sp = lin(t, t_in + 0.55, t_in + 1.15)
+    if 0 < sp < 1:
+        xx = np.arange(B["pw"], dtype=np.float32)[None, :] / B["pw"]
+        yy = np.arange(B["ph"], dtype=np.float32)[:, None] / B["ph"]
+        band = np.exp(-((xx + 0.3 * yy - lerp(-0.3, 1.3, ease_in_out(sp))) / 0.06) ** 2) * B["a"] * 0.35
+        canvas += warp(band)[..., None] * al
 
 
 def tag(canvas, t, t_in, t_out, name, glow):
@@ -197,6 +253,9 @@ def tag(canvas, t, t_in, t_out, name, glow):
     draw_text(canvas, name, "InterDisplay-BlackItalic.otf", size, 540 - (1 - a_in) * 50, 222 + yoff, alpha=a,
               reveal=ease_out_cubic(lin(t, t_in, t_in + 0.35)), glow=glow, glow_r=22, glow_s=0.9, shadow=0.55,
               blur=(1 - a_out) * 8)
+    if CHIP_STYLE == "logo":
+        draw_logo_row(canvas, t, t_in, a, a_out, yoff, glow)
+        return
     draw_text(canvas, CHIP_TEXT, "InterDisplay-SemiBold.otf", 30, 540, 222 + size * 0.6 + 20 + yoff,
               alpha=a * ease_out_cubic(lin(t, t_in + 0.1, t_in + 0.4)), tracking=0.22, shadow=0.5,
               glow=glow, glow_r=10, glow_s=0.35)
