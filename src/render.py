@@ -216,6 +216,12 @@ def lime_hue(h, w):
     return None
 
 
+# opening headline: (text, max width, y) per bass hit; the HERO line gets the lime gradient
+INTRO_LINES = [("THE ULTIMATE", 760, 290), ("REFRESHMENT", 960, 418), ("IS HERE.", 560, 540)]
+INTRO_FONTS = ["InterDisplay-Black.otf", "InterDisplay-BlackItalic.otf", "InterDisplay-Black.otf"]
+INTRO_HERO = 1
+
+
 def scene1(t, fi):
     c = can(0)
     post = dict(flash=0.0, ca=0.0, grain=0.016)
@@ -350,15 +356,14 @@ def scene1(t, fi):
 
     # ---------------- text
     if pre:
-        lines = [("THE ULTIMATE", 760, 290), ("REFRESHMENT", 960, 418), ("IS HERE.", 560, 540)]
-        fonts = ["InterDisplay-Black.otf", "InterDisplay-BlackItalic.otf", "InterDisplay-Black.otf"]
+        lines, fonts, hero = INTRO_LINES, INTRO_FONTS, INTRO_HERO
         explode = ease_in_cubic(lin(t, 2.8, 3.0))
         for i, ((t0, _), (txt, mw, y)) in enumerate(zip(TL.INTRO_WORDS, lines)):
             if t < t0:
                 continue
             k = ease_out_expo(lin(t, t0, t0 + 0.22))
             size = fit_size(txt, fonts[i], mw, 190)
-            grad = ((1, 1, 1), (0.75, 1.0, 0.45)) if i == 1 else None
+            grad = ((1, 1, 1), (0.75, 1.0, 0.45)) if i == hero else None
             draw_text(canvas, txt, fonts[i], size, 540, y, alpha=k * (1 - explode),
                       scale=lerp(1.45, 1.0, k) * (1 + 0.5 * explode), blur=(1 - k) * 14 + explode * 12,
                       glow=(0.45, 1.0, 0.25), glow_r=26, glow_s=0.7 + 0.6 * decay(t, t0, 0.15), grad=grad, shadow=0.4)

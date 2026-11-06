@@ -8,6 +8,7 @@ its own scene and only one product is ever on screen at a time.
 |---|---|---|---|
 | **Reel 1** | Bucked Up Lightly Carbonated Protein: Cherry Limeade, Rainbow Candy, Green Apple, Banana Pineapple | 24.5 s | `output/ezy_pzy_reel_1080x1920.mp4`, `output/ezy_pzy_reel_thumbnail.jpg`, `output/storyboard.jpg` |
 | **Reel 1, Updated** | Same as Reel 1, with a new ending showing the store logo and both locations | 26.5 s | `output/Ezy_Pzy_Convenience_Reel_1_Updated.mp4`, `output/Reel_1_Updated_ending_storyboard.jpg` |
+| **Reel 1, Final** (latest) | Reel 1 Updated with the opening headline changed to "POWER EVERY REP WITH BUCKED UP!" | 26.5 s | `output/Ezy_Pzy_Bucked_Up_Reel_1_Final.mp4` |
 | **Reel 2** | Crush Pineapple, Crush Big Troppa Punch, Crush Peach, Fanta Strawberry, Fanta Pineapple, Fanta Mango, Fanta Crimson Sour Cherry | 28.5 s | `output/reel2/ezy_pzy_reel2_1080x1920.mp4`, `output/reel2/ezy_pzy_reel2_thumbnail.jpg`, `output/reel2/storyboard.jpg` |
 | **Reel 2, Two Locations edition** | Same as Reel 2, with a new closing scene showing the store logo picture and both locations | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Two_Locations_Reel.mp4`, `output/reel2/Two_Locations_ending_storyboard.jpg` |
 | **Reel 2, Final** | The Two Locations edition with the store name corrected to "EZY PZY CONVENIENCE" in every drink scene | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Final_Reel.mp4` |
@@ -104,6 +105,13 @@ Everything before it is reused, not re-rendered:
 - **Audio:** the original mix is untouched (decoded samples identical) up to 22.99 s. The end card's last groove bar (21.0–23.0 s) then plays twice before the final hit, so the ending is 2 s longer (26.5 s total).
 
 Rebuild with `python3 src/reel1_two_locations.py` after Reel 1's frames exist (`./build.sh`).
+
+### Reel 1, Final (`src/reel1_final.py`)
+
+Only the opening headline changes, to **"POWER EVERY REP WITH BUCKED UP!"**. It keeps the original three slams on the same three bass hits: "POWER EVERY REP" / "WITH" / "BUCKED UP!". The fonts, white and lime-gradient colours, glow, slam-in and the burst on the bass drop are all unchanged, and the lime highlight now lands on BUCKED UP!.
+- Only the 82 opening frames showing the headline (0.27–2.97 s) were re-rendered, after the script checks that the renderer reproduces the current frames exactly.
+- Every other GOP of the Updated Reel 1 is copied bit-for-bit: 705 of 795 frames, including all four drink scenes and the whole ending.
+- The audio is identical. The generic patch helpers live in `src/patching.py`.
 
 ---
 
