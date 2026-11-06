@@ -8,6 +8,7 @@ its own scene and only one product is ever on screen at a time.
 |---|---|---|---|
 | **Reel 1** | Bucked Up Lightly Carbonated Protein: Cherry Limeade, Rainbow Candy, Green Apple, Banana Pineapple | 24.5 s | `output/ezy_pzy_reel_1080x1920.mp4`, `output/ezy_pzy_reel_thumbnail.jpg`, `output/storyboard.jpg` |
 | **Reel 2** | Crush Pineapple, Crush Big Troppa Punch, Crush Peach, Fanta Strawberry, Fanta Pineapple, Fanta Mango, Fanta Crimson Sour Cherry | 28.5 s | `output/reel2/ezy_pzy_reel2_1080x1920.mp4`, `output/reel2/ezy_pzy_reel2_thumbnail.jpg`, `output/reel2/storyboard.jpg` |
+| **Reel 2, Two Locations edition** | Same as Reel 2, with a new closing scene showing the store logo picture and both locations | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Two_Locations_Reel.mp4`, `output/reel2/Two_Locations_ending_storyboard.jpg` |
 
 Both videos are 1080×1920, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
 
@@ -34,6 +35,26 @@ Both videos are 1080×1920, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, w
 3. Foreground effects, camera moves (push-ins, close-ups, zoom-outs, whips), light sweeps, rim lights and the transitions are layered on top.
 
 Files: `src/timeline2.py` (timing), `src/reel2_audio.py` (soundtrack), `src/reel2_render.py` (scenes), `src/reel2_thumbnail.py`, `build_reel2.sh`.
+
+### Two Locations edition (`src/reel2_two_locations.py`)
+
+Only the closing store-promotion scene is new. Everything before it is reused, not re-rendered:
+- **Video:** the original export's compressed video stream is copied bit-for-bit up to its last keyframe before the end card (frames 0–698, up to 23.3 s). Frames 699–719 are encoded from the identical original source frames. All 699 frames decode pixel-identical to the original file.
+- **Audio:** the original mix is untouched (decoded samples identical) up to 26.99 s. To give the addresses more reading time, the end card's last groove bar (25.5–27.0 s) plays twice before the final hit, joined with a 12 ms crossfade just before the downbeat. That's a standard music edit, so the soundtrack stays the original and the ending gets 1.5 s longer (30.0 s total).
+
+The new closing scene (24.0–30.0 s) is synced to the original end-card hits:
+
+| Time | Element | Synced to |
+|---|---|---|
+| 24.15 s | The uploaded Ezy Pzy Convenience logo picture, shown unaltered on a rounded card with a gold rim, glow, shadow and reflection. It reveals with a light-wipe from the centre outward, then gently floats and pushes in | Low hit |
+| 24.30 s | "VISIT US AT TWO LOCATIONS!" and a gold rule | Whoosh |
+| 24.75 / 24.93 s | 📍 153 Great Northern Rd, Sault Ste. Marie, ON P6B 4Y9 and 📍 216 Second Line West, Sault Ste. Marie, ON. Each sits on a glass panel and its pin drops in | Whoosh |
+| 25.20 s | "STOP BY & GRAB YOUR FAVOURITES!" gold pill | Bell |
+| 26.0 / 27.5 s | Shine sweeps | Sparkles |
+| 28.5 s | Final punch and glow | Final hit |
+| 29.6–30.0 s | Fade to black | Ring-out |
+
+The complete card is on screen together for about 4 s, and the addresses are readable for about 4.4 s. No postal code was added for the second address. Rebuild with `TWO_LOCATIONS=1 ./build_reel2.sh`, or run `python3 src/reel2_two_locations.py` after Reel 2's frames exist.
 
 ---
 
@@ -76,7 +97,7 @@ python3 src/reel2_render.py --test 3.5,8.0   # preview single frames into output
 
 ## Notes and limitations
 
-- **Store logo:** none was supplied, so the end card uses typography only (Inter Display). No logo was invented. To add the real logo, drop a transparent PNG in `assets/` and composite it in `end_card()` in `src/render.py`.
+- **Store logo:** the supplied logo picture (`assets/brand/ezy_pzy_logo.jpg`) appears unaltered in the Two Locations edition. Reel 1 and the original Reel 2 still use the typography-only end card.
 - **Product fidelity:** the cans are the supplied photos, never redrawn or relabelled. Movement is 2.5D: camera moves, parallax effect layers and light sweeps. Real 3D turnarounds aren't possible from a single front photo.
 - **On-screen copy:** product names exactly as printed on the cans, plus "NOW AT EZY PZY" and the store details. No nutrition or health claims are added.
 - Fonts: Inter / Inter Display (SIL Open Font License), included in `assets/fonts/`.

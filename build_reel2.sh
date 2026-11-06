@@ -28,3 +28,9 @@ echo "== 5/5 thumbnail"
 ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,pix_fmt,sample_rate:format=duration,size,bit_rate \
   -of default=nw=1 "$OUT/ezy_pzy_reel2_1080x1920.mp4"
 echo "done -> $OUT/ezy_pzy_reel2_1080x1920.mp4"
+
+# Optional: "Two Locations" edition (new closing scene only; everything before it is reused untouched)
+if [ -n "${TWO_LOCATIONS:-}" ]; then
+  echo "== two-locations edition"
+  (cd src && python3 reel2_two_locations.py)
+fi
