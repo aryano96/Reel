@@ -3,5 +3,6 @@ output/build2/
 output/build2_two_locations/
 output/build2_final/
 output/build2_logo_final/
+output/build2_logo_top/
 __pycache__/
 *.pyc

@@ -184,7 +184,9 @@ def scene_cam(i, t, z_wide=Z0):
 
 
 CHIP_TEXT = "NOW AT EZY PZY CONVENIENCE"   # store line under each product name (text style)
-CHIP_STYLE = "logo"     # "text": single text line; "logo": the store logo badge
+CHIP_STYLE = "logo_top"  # "text": text line under name; "logo": logo badge under name; "logo_top": logo badge above name
+LOGO_TOP_Y = 212         # logo centre (logo_top style)
+NAME_Y_LOGO_TOP = 310    # product name centre (logo_top style)
 LOGO_PATH = os.path.join(ROOT, "assets", "brand", "ezy_pzy_logo.jpg")
 LOGO_CROP = (24, 49, 1041, 402)     # trims empty white margin only - the logo itself is untouched
 LOGO_H = 90
@@ -212,12 +214,12 @@ def logo_badge(h=LOGO_H):
                 w=w, h=h, pw=m.shape[1], ph=m.shape[0])
 
 
-def draw_logo_row(canvas, t, t_in, a, a_out, yoff, glow):
-    """The store logo badge, centred under the product name (replaces the text line)."""
+def draw_logo_row(canvas, t, t_in, a, a_out, yoff, glow, cy=None):
+    """The store logo badge, centred (under the product name, or above it for logo_top)."""
     if a * ease_out_cubic(lin(t, t_in + 0.1, t_in + 0.4)) <= 0.002:
         return
     B = logo_badge()
-    cy = 304 + yoff
+    cy = (304 if cy is None else cy) + yoff
     k = ease_out_expo(lin(t, t_in + 0.12, t_in + 0.55))
     al = a * k
     if al <= 0.002:
@@ -250,11 +252,16 @@ def tag(canvas, t, t_in, t_out, name, glow):
     a = a_in * a_out
     size = fit_size(name, "InterDisplay-BlackItalic.otf", 900, 92)
     yoff = (1 - a_in) * 26 - (1 - a_out) * 34
-    draw_text(canvas, name, "InterDisplay-BlackItalic.otf", size, 540 - (1 - a_in) * 50, 222 + yoff, alpha=a,
+    name_y = NAME_Y_LOGO_TOP if CHIP_STYLE == "logo_top" else 222
+    if CHIP_STYLE == "logo_top":
+        draw_logo_row(canvas, t, t_in, a, a_out, yoff, glow, cy=LOGO_TOP_Y)
+    draw_text(canvas, name, "InterDisplay-BlackItalic.otf", size, 540 - (1 - a_in) * 50, name_y + yoff, alpha=a,
               reveal=ease_out_cubic(lin(t, t_in, t_in + 0.35)), glow=glow, glow_r=22, glow_s=0.9, shadow=0.55,
               blur=(1 - a_out) * 8)
     if CHIP_STYLE == "logo":
         draw_logo_row(canvas, t, t_in, a, a_out, yoff, glow)
+        return
+    if CHIP_STYLE == "logo_top":
         return
     draw_text(canvas, CHIP_TEXT, "InterDisplay-SemiBold.otf", 30, 540, 222 + size * 0.6 + 20 + yoff,
               alpha=a * ease_out_cubic(lin(t, t_in + 0.1, t_in + 0.4)), tracking=0.22, shadow=0.5,

@@ -30,7 +30,7 @@ OUT_MP4 = os.path.join(ROOT, "output", "reel2", "Ezy_Pzy_Convenience_Logo_Final_
 
 
 def _check(fi):
-    R2.CHIP_STYLE = "logo"
+    R2.CHIP_STYLE = "logo"   # logo under the name
     new = R2.render_frame(fi)
     old = cv2.cvtColor(cv2.imread(os.path.join(SRC_FRAMES, f"{fi:05d}.png")), cv2.COLOR_BGR2RGB)
     changed = not np.array_equal(new, old)
