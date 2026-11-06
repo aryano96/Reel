@@ -142,3 +142,17 @@ python3 src/reel2_render.py --test 3.5,8.0   # preview single frames into output
 - **Product fidelity:** the cans are the supplied photos, never redrawn or relabelled. Movement is 2.5D: camera moves, parallax effect layers and light sweeps. Real 3D turnarounds aren't possible from a single front photo.
 - **On-screen copy:** product names exactly as printed on the cans, plus "NOW AT EZY PZY" and the store details. No nutrition or health claims are added.
 - Fonts: Inter / Inter Display (SIL Open Font License), included in `assets/fonts/`.
+
+---
+
+## Storefront reveal (`src/storefront_reveal.py`)
+
+`output/storefront/Ezy_Pzy_Cinematic_Storefront_Reveal.mp4` is a 9.5 s, 1080×1920, 30 fps cinematic storefront reveal made from the real store video (`assets/storefront/store_video_original.MOV`).
+
+**What it is and isn't:** the source is a 5.5 s, 360×480, night-time phone clip filmed from ground level, zooming toward the store. It contains no aerial footage, so a real drone descent (sky → down → forward) **cannot** be made from it honestly. Any "from above" view would have to be invented, which would mean inventing the building and its surroundings. This video is instead an honest cinematic treatment of the real footage. Nothing in the frame is AI-generated.
+- **Camera tracking:** SIFT + RANSAC places every frame in one shared space, so the move is re-timed into a single eased approach. It starts with a wide hold, then a smooth push to the storefront, then a gentle push-in and a hold on the hero shot. The original speed jumps, handheld shake and the iPhone lens-switch exposure jump are all removed.
+- **Cleanup:** the filmer's shadow is relit (asphalt texture kept), the parked car is cloned out, and small litter specks on the lot are removed. The building, signage, windows, door and neighbouring businesses are untouched.
+- **Look:** denoising, multi-frame averaging on the hero hold, a night cinematic grade (navy sky, warm store light, bloom, vignette, grain) and subtle zoom blur on the push.
+- **Sound** (`src/storefront_audio.py`): original and synthesized. It has night ambience and a pad, a build-up and aerial whooshes during the approach, an impact on the reveal, and a warm ending.
+
+The source resolution limits sharpness: the storefront is about 360 px wide in the original, so the hero shot is softer than native 1080p. A real drone clip (ideally at golden hour), or a higher-resolution 4K phone video, would remove both limits.
