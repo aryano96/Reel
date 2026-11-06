@@ -140,9 +140,10 @@ def pin_sprite(px=60):
         return np.dstack([col * m[..., None], m])
 
 
-def sizes():
-    s1 = min(fit_size(a, "InterDisplay-SemiBold.otf", 740, 64) for a, _ in LOCATIONS)
-    s2 = min(fit_size(b, "InterDisplay-Medium.otf", 740, 48) for _, b in LOCATIONS)
+@lru_cache(maxsize=4)
+def sizes(locations=tuple(LOCATIONS)):
+    s1 = min(fit_size(a, "InterDisplay-SemiBold.otf", 740, 64) for a, _ in locations)
+    s2 = min(fit_size(b, "InterDisplay-Medium.otf", 740, 48) for _, b in locations)
     hs = fit_size(HEADLINE, "InterDisplay-Black.otf", 900, 74)
     cs = min(fit_size(CTA1, "InterDisplay-Black.otf", 620, 72), fit_size(CTA2, "InterDisplay-Black.otf", 620, 72))
     return s1, s2, hs, cs
@@ -166,29 +167,34 @@ def rounded_panel(w, h, r):
 
 
 # ----------------------------------------------------------------- the scene
-def end_card_two_locations(t, fi):
+def end_card_two_locations(t, fi, T_=None, locations=None, leaks=None):
+    """Closing scene. Defaults = Reel 2; Reel 1 passes its own timing, addresses and light leaks."""
+    T_ = T if T_ is None else T_
+    locs = tuple(LOCATIONS if locations is None else locations)
+    S_STREET, S_CITY = sizes(locs)[:2]
+    leaks = BRAND_LEAKS if leaks is None else leaks
     post = dict(flash=0.0, ca=0.0, grain=0.014)
-    e = t - T.END_START
-    shift = 1800 * (1 - ease_out_cubic(lin(t, T.END_START, T.END_START + 0.28)))
+    e = t - T_.END_START
+    shift = 1800 * (1 - ease_out_cubic(lin(t, T_.END_START, T_.END_START + 0.28)))
     canvas = radial_bg((0.07, 0.06, 0.13), (0.004, 0.004, 0.012), 540, 860, 1000, 1300, 1.2).copy()
-    for i, (col, x, y) in enumerate(BRAND_LEAKS):
+    for i, (col, x, y) in enumerate(leaks):
         add_glow(canvas, x + 90 * np.sin(e * 0.5 + i), y + 70 * np.cos(e * 0.4 + i * 2) + shift, 620, col, 0.15)
-    R.god_rays(canvas, t, 540, CARD_CY + shift, GOLD, 0.10 + 0.10 * decay(t, T.LOGO, 0.5), n=18, speed=0.03, sharp=8)
-    add_glow(canvas, 540, CARD_CY + shift, 820, GOLD, 0.16 * smooth(lin(t, T.LOGO, T.LOGO + 0.6)))
+    R.god_rays(canvas, t, 540, CARD_CY + shift, GOLD, 0.10 + 0.10 * decay(t, T_.LOGO, 0.5), n=18, speed=0.03, sharp=8)
+    add_glow(canvas, 540, CARD_CY + shift, 820, GOLD, 0.16 * smooth(lin(t, T_.LOGO, T_.LOGO + 0.6)))
     R.bokeh(canvas, t, 31, 16, [(0.9, 0.2, 0.25), (0.3, 0.35, 0.95), (1.0, 0.6, 0.2), GOLD], inten=0.08, rmin=30, rmax=90, speed=14)
     R.dust(canvas, t, 21, 150, (1.0, 0.85, 0.5), inten=0.7, rmin=2, rmax=6, vy=-40)
     yo = shift
 
     # ---- logo picture card
     L = logo_card()
-    k = ease_out_expo(lin(t, T.LOGO, T.LOGO + 0.55))
+    k = ease_out_expo(lin(t, T_.LOGO, T_.LOGO + 0.55))
     if k > 0:
-        punch = 1 + 0.03 * decay(t, T.FINAL, 0.25) if t >= T.FINAL else 1.0
+        punch = 1 + 0.03 * decay(t, T_.FINAL, 0.25) if t >= T_.FINAL else 1.0
         sc = lerp(1.14, 1.0, k) * (1 + 0.012 * np.sin(e * 0.9)) * punch
         float_y = 5 * np.sin(e * 1.1)
         cy = CARD_CY + yo + float_y
         # light-wipe reveal from the centre outward
-        rv = ease_in_out(lin(t, T.LOGO, T.LOGO + 0.42))
+        rv = ease_in_out(lin(t, T_.LOGO, T_.LOGO + 0.42))
         xs = (np.arange(L["w"], dtype=np.float32) - L["w"] / 2) / (CARD_W / 2)
         reveal = np.clip((rv * 1.08 - np.abs(xs)) / 0.06, 0, 1)[None, :]
         M = np.float32([[sc, 0, 540 - sc * L["w"] / 2], [0, sc, cy - sc * L["h"] / 2]])
@@ -222,7 +228,7 @@ def end_card_two_locations(t, fi):
                 ex = 540 + sgn * rv * 1.08 * CARD_W / 2 * sc
                 add_glow(canvas, ex, cy, sc * L["ch"] * 0.7, (1.0, 0.95, 0.8), 0.9, sx=0.08, sy=1.0)
         # shine sweeps across the card (transient light, picture unchanged)
-        for s0 in T.SHINES + (T.FINAL,):
+        for s0 in T_.SHINES + (T_.FINAL,):
             if s0 <= t < s0 + 0.75:
                 pos = lerp(-0.35, 1.35, ease_in_out((t - s0) / 0.75))
                 xx = np.arange(L["w"], dtype=np.float32)[None, :] / L["w"]
@@ -231,14 +237,14 @@ def end_card_two_locations(t, fi):
                 canvas += warp(band)[..., None]
 
     # ---- headline
-    kh = ease_out_cubic(lin(t, T.HEAD, T.HEAD + 0.45))
+    kh = ease_out_cubic(lin(t, T_.HEAD, T_.HEAD + 0.45))
     if kh > 0:
         tr = lerp(0.35, 0.04, kh)
         draw_text(canvas, HEADLINE, "InterDisplay-Black.otf", S_HEAD, 540, HEAD_Y + yo, alpha=kh,
                   tracking=round(tr, 3) if kh < 1 else 0.04, scale=min(1.0, lerp(0.85, 1.0, kh)), blur=(1 - kh) * 6,
                   grad=((1, 1, 1), (1.0, 0.86, 0.52)), glow=GOLD, glow_r=18, glow_s=0.5, shadow=0.5)
     # ---- gold rule
-    kr = ease_in_out(lin(t, T.RULE, T.RULE + 0.38))
+    kr = ease_in_out(lin(t, T_.RULE, T_.RULE + 0.38))
     if kr > 0:
         hw = 250 * kr
         y = int(RULE_Y + yo)
@@ -252,13 +258,13 @@ def end_card_two_locations(t, fi):
     pin = pin_sprite(72)
     f_st = fx.font("InterDisplay-SemiBold.otf", S_STREET)
     f_ct = fx.font("InterDisplay-Medium.otf", S_CITY)
-    block_w = max(max(f_st.getlength(a), f_ct.getlength(b)) for a, b in LOCATIONS)
+    block_w = max(max(f_st.getlength(a), f_ct.getlength(b)) for a, b in locs)
     pin_gap = 26
     row_w = pin.shape[1] + pin_gap + block_w
     x_pin = 540 - row_w / 2
     x_txt = x_pin + pin.shape[1] + pin_gap
-    for j, ((street, city), ry) in enumerate(zip(LOCATIONS, ROW_Y)):
-        ka = ease_out_cubic(lin(t, T.ADDR[j], T.ADDR[j] + 0.42))
+    for j, ((street, city), ry) in enumerate(zip(locs, ROW_Y)):
+        ka = ease_out_cubic(lin(t, T_.ADDR[j], T_.ADDR[j] + 0.42))
         if ka <= 0:
             continue
         cy = ry + yo + 28 * (1 - ka)
@@ -271,9 +277,9 @@ def end_card_two_locations(t, fi):
         border = np.clip(cv2.GaussianBlur(pm, (0, 0), 0.8) - cv2.erode(pm, np.ones((5, 5), np.uint8)), 0, 1)
         blend_add(canvas, (border * 0.22 * ka)[..., None] * np.array([1.0, 0.92, 0.75], np.float32), px0, py0)
         # pin drops in with a little bounce
-        kp = ease_out_back(lin(t, T.ADDR[j] + 0.08, T.ADDR[j] + 0.45), 2.4)
+        kp = ease_out_back(lin(t, T_.ADDR[j] + 0.08, T_.ADDR[j] + 0.45), 2.4)
         if kp > 0:
-            pa = clamp(lin(t, T.ADDR[j] + 0.08, T.ADDR[j] + 0.2))
+            pa = clamp(lin(t, T_.ADDR[j] + 0.08, T_.ADDR[j] + 0.2))
             psy = cy - pin.shape[0] / 2 - 46 * (1 - kp)
             add_glow(canvas, x_pin + pin.shape[1] / 2, cy + 4, 46, (1.0, 0.3, 0.3), 0.25 * pa)
             blend_over(canvas, pin[..., :3] * pa, pin[..., 3] * pa, int(x_pin), int(psy))
@@ -282,15 +288,15 @@ def end_card_two_locations(t, fi):
                   color=(0.92, 0.9, 0.95), blur=(1 - ka) * 5, shadow=0.45)
 
     # ---- CTA pill
-    kc = ease_out_back(lin(t, T.CTA, T.CTA + 0.38), 2.2)
-    kca = lin(t, T.CTA, T.CTA + 0.15)
+    kc = ease_out_back(lin(t, T_.CTA, T_.CTA + 0.38), 2.2)
+    kca = lin(t, T_.CTA, T_.CTA + 0.15)
     if kca > 0:
         cs = S_CTA
         f2 = fx.font("InterDisplay-Black.otf", cs)
         tw = max(f2.getlength(CTA1), f2.getlength(CTA2))
         pw, ph = tw + 110, cs * 2.55
         cy = CTA_Y + yo
-        pulse = 1 + 0.018 * np.sin(max(0, t - T.CTA - 0.4) * 5.5) * (t > T.CTA + 0.4)
+        pulse = 1 + 0.018 * np.sin(max(0, t - T_.CTA - 0.4) * 5.5) * (t > T_.CTA + 0.4)
         sc = max(0.01, kc) * pulse
         pad = 30
         lw, lh = int(pw * sc) + 2 * pad, int(ph * sc) + 2 * pad
@@ -304,7 +310,7 @@ def end_card_two_locations(t, fi):
         a = pm * kca
         blend_add(canvas, (cv2.GaussianBlur(pm, (0, 0), 16) * 0.55 * kca)[..., None] * np.array(GOLD, np.float32), int(540 - lw / 2), int(cy - lh / 2))
         blend_over(canvas, col * a[..., None], a, int(540 - lw / 2), int(cy - lh / 2))
-        for s0 in (T.SHINES[1],):
+        for s0 in (T_.SHINES[1],):
             sp = lin(t, s0, s0 + 0.7)
             if 0 < sp < 1:
                 xs = np.arange(lw, dtype=np.float32)[None, :] / lw
@@ -315,14 +321,14 @@ def end_card_two_locations(t, fi):
 
     if shift > 1:
         canvas = vblur(canvas, shift * 0.12)
-    zs = 1 + 0.035 * ease_in_out(lin(t, T.END_START + 0.3, T.DURATION))
+    zs = 1 + 0.035 * ease_in_out(lin(t, T_.END_START + 0.3, T_.DURATION))
     M = np.float32([[zs, 0, 540 - zs * 540], [0, zs, 960 - zs * 960]])
     canvas = cv2.warpAffine(canvas, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-    post["flash"] = 0.85 * (1 - ease_out_cubic(lin(t, T.END_START, T.END_START + 0.2)))
-    post["flash"] += 0.18 * decay(t, T.LOGO, 0.06) + (0.12 * decay(t, T.FINAL, 0.08) if t >= T.FINAL else 0.0)
+    post["flash"] = 0.85 * (1 - ease_out_cubic(lin(t, T_.END_START, T_.END_START + 0.2)))
+    post["flash"] += 0.18 * decay(t, T_.LOGO, 0.06) + (0.12 * decay(t, T_.FINAL, 0.08) if t >= T_.FINAL else 0.0)
     post["flash_color"] = (1.0, 0.95, 0.85)
-    post["ca"] = 6 * decay(t, T.LOGO, 0.12)
-    post["fade"] = 1 - smooth(lin(t, T.FADE, T.DURATION - 1.0 / FPS))
+    post["ca"] = 6 * decay(t, T_.LOGO, 0.12)
+    post["fade"] = 1 - smooth(lin(t, T_.FADE, T_.DURATION - 1.0 / FPS))
     return canvas, post
 
 

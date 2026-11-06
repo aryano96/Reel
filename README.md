@@ -7,6 +7,7 @@ its own scene and only one product is ever on screen at a time.
 | Reel | Products | Length | Files |
 |---|---|---|---|
 | **Reel 1** | Bucked Up Lightly Carbonated Protein: Cherry Limeade, Rainbow Candy, Green Apple, Banana Pineapple | 24.5 s | `output/ezy_pzy_reel_1080x1920.mp4`, `output/ezy_pzy_reel_thumbnail.jpg`, `output/storyboard.jpg` |
+| **Reel 1, Updated** | Same as Reel 1, with a new ending showing the store logo and both locations | 26.5 s | `output/Ezy_Pzy_Convenience_Reel_1_Updated.mp4`, `output/Reel_1_Updated_ending_storyboard.jpg` |
 | **Reel 2** | Crush Pineapple, Crush Big Troppa Punch, Crush Peach, Fanta Strawberry, Fanta Pineapple, Fanta Mango, Fanta Crimson Sour Cherry | 28.5 s | `output/reel2/ezy_pzy_reel2_1080x1920.mp4`, `output/reel2/ezy_pzy_reel2_thumbnail.jpg`, `output/reel2/storyboard.jpg` |
 | **Reel 2, Two Locations edition** | Same as Reel 2, with a new closing scene showing the store logo picture and both locations | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Two_Locations_Reel.mp4`, `output/reel2/Two_Locations_ending_storyboard.jpg` |
 | **Reel 2, Final** | The Two Locations edition with the store name corrected to "EZY PZY CONVENIENCE" in every drink scene | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Final_Reel.mp4` |
@@ -86,6 +87,23 @@ The build method is the same as the Final edition. The script checks that the re
 | 19.0–24.5 | **End card** | Store name, full address and call to action with gold lighting. The complete card holds for about 3.5 s | Impact, chord, sparkles, final hit |
 
 These photos had clean backgrounds, so each can was cut out (`src/extract_cans.py`) and rendered with a gentle cylindrical rotation, a specular sweep and a floor reflection.
+
+### Reel 1, Updated (`src/reel1_two_locations.py`)
+
+Only the closing scene changes. It's the same ending design as Reel 2's Two Locations edition, in Reel 1's own lighting:
+1. The store logo, revealed with a light-wipe at 19.15 s.
+2. "VISIT US AT TWO LOCATIONS!"
+3. 📍 153 Great Northern Rd, Sault Ste. Marie, ON P6B 4Y9
+4. 📍 216 Second Line W, Sault Ste. Marie, ON P6C 2J3
+5. "STOP BY & GRAB YOUR FAVOURITES!"
+
+Each element lands on the original end-card hits, and the complete card stays on screen for about 5.5 s.
+
+Everything before it is reused, not re-rendered:
+- **Video:** the original Reel 1 video stream is copied bit-for-bit up to its last keyframe before the ending (frames 0–544, up to 18.1 s). Frames 545–569 are re-encoded from the identical original source frames.
+- **Audio:** the original mix is untouched (decoded samples identical) up to 22.99 s. The end card's last groove bar (21.0–23.0 s) then plays twice before the final hit, so the ending is 2 s longer (26.5 s total).
+
+Rebuild with `python3 src/reel1_two_locations.py` after Reel 1's frames exist (`./build.sh`).
 
 ---
 
