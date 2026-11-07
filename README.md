@@ -16,6 +16,8 @@ its own scene and only one product is ever on screen at a time.
 
 | **Reel 3** | Alani Nu: Cotton Candy, Purple Cotton Candy, Witch's Brew, Hawaiian Shaved Ice, Orange Kiss, Cherry Slush, Breezeberry, Cosmic Stardust, Watermelon Wave, with a "2 FOR $5.99 BEFORE TAXES" price label on every frame | 27.75 s @ 60 fps | `output/reel3/Ezy_Pzy_Alani_Nu_2_for_5.99_Reel.mp4`, `output/reel3/storyboard.jpg` |
 
+| **Reel 3, Two Locations** (latest) | Reel 3 with the price banner moved to the bottom of every frame (removed once the end card and logo appear) and both store locations on the end card | 27.75 s @ 60 fps | `output/reel3/Ezy_Pzy_Alani_Nu_2_for_5.99_Two_Locations_Reel.mp4`, `output/reel3/Two_Locations_storyboard.jpg` |
+
 Reels 1 and 2 are 1080×1920, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
 
 ---
@@ -185,3 +187,12 @@ The source resolution limits sharpness: the storefront is about 360 px wide in t
 **Audio** (`src/reel3_audio.py`): an original 160 BPM trap track with an impact on every reveal and sound design matched to each scene (splash, can crack, fizz, carnival chimes, cauldron bubbles, ice clinks, thunder and zaps, warp riser, sparkles). It's mastered to −10.7 LUFS with a −1.0 dBTP ceiling.
 
 Rebuild everything with `./build_reel3.sh` (about 12 minutes on 4 cores).
+
+### Reel 3, Two Locations (current `src/reel3_render.py`)
+
+- **Price banner:** a wide red banner, "2 FOR $5.99" over "BEFORE TAXES", sits at the bottom centre (y 1646–1778) of every frame from the intro through the last drink. It slides down and fades out between 23.25 s and 23.40 s, so it's gone before the store logo appears and is absent from the whole end card. The end card still shows the offer in large text.
+- **Keeping the banner clear:** no can ever reaches it. Every shot's camera is lifted if the can's base would dip below y 1622. The intro can is a little smaller and higher, close-ups are push-ins anchored at the can's base, and the three whips that used to dip below the frame (Purple Cotton Candy → Witch's Brew, Hawaiian Shaved Ice → Orange Kiss, Cosmic Stardust → Watermelon Wave) now swipe sideways.
+- **End card:** both locations are listed. 📍 153 Great Northern Rd, Sault Ste. Marie, ON P6B 4Y9 and 📍 216 Second Line West, Sault Ste. Marie, ON P6C 2J3 sit on matching glass panels, with pins dropping in one after the other.
+- **Verified on the decoded MP4:** the banner is intact in all 1,395 frames before the end card and absent in every frame from the logo onward. The lowest can base is at y 1622, 24 px above the banner. All nine drinks appear one at a time, and the soundtrack is identical to the first version.
+
+The first version's code is at commit `0b91aa3`.

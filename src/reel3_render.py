@@ -45,17 +45,16 @@ import reel2_two_locations as TLOC
 ROOT = fx.ROOT
 A3 = os.path.join(ROOT, "assets", "reel3")
 GEO3 = json.load(open(os.path.join(A3, "geometry.json")))
-BUILD = os.path.join(ROOT, "output", "build3")
+BUILD = os.path.join(ROOT, "output", "build3_v2")
 FRAMES = os.path.join(BUILD, "frames")
 
 # ------------------------------------------------------------- layout guards
-BADGE_W, BADGE_H = 200, 224
-BADGE_CX, BADGE_CY = 16 + BADGE_W / 2, 900          # left margin, mid height (inside IG safe area)
+BANNER_W, BANNER_H = 540, 132
+BANNER_CX, BANNER_CY = 540, 1712                     # bottom-centre price banner (top edge at 1646)
+CAN_BOTTOM_LIMIT = 1622.0                            # no can ever goes below this line (keeps the banner clear)
 CAN_H = 1200.0                                       # wide shot: can height on screen
 CAN_CY = 1000.0                                      # wide shot: can centre (top at 400, bottom at 1600)
-CLOSE_W = 750.0                                      # close-up: can width on screen
-CLOSE_CX = 625.0                                     # close-up: can centre x (left edge ~250 > badge edge 216)
-ENTRY_ZOOM = 1.33                                    # max zoom-out entrance (keeps centred can clear of the badge)
+CLOSE_H = 1660.0                                     # close-up: can height on screen (anchored at its base)
 
 _plates = {}
 
@@ -74,11 +73,6 @@ def wide_cam(p, zmul=1.0, dx=0.0, dy=0.0, ay=CAN_CY):
     return Cam(z=zw(p) * zmul, fx=p.cx + dx, fy=(p.top + p.bot) / 2 + dy, ax=540, ay=ay)
 
 
-# close-up pans, as fractions of can height (0 = top of can)
-CLOSE_PATH = [(0.30, 0.52), (0.48, 0.30), (0.30, 0.55), (0.52, 0.30), (0.30, 0.50),
-              (0.50, 0.30), (0.32, 0.52), (0.52, 0.32), (0.30, 0.50)]
-
-
 def scene_cam(i, t):
     p = plate(i)
     s = TL.DRINK_STARTS[i]
@@ -87,17 +81,45 @@ def scene_cam(i, t):
         return wide_cam(p, 1 + 0.05 * ease_in_out(u / TL.CLOSE), dx=8 * np.sin(u * 1.9 + i))
     if u < TL.MEDIUM:
         x = lin(u, TL.CLOSE, TL.MEDIUM)
-        zc = CLOSE_W / (p.right - p.left) * (1 + 0.035 * x + 0.025 * decay(u, TL.CLOSE, 0.1))
-        a, b = CLOSE_PATH[i]
-        fy = p.top + (p.bot - p.top) * lerp(a, b, ease_in_out(x))
-        return Cam(z=zc, fx=p.cx - (CLOSE_CX - 540) / zc, fy=fy, ax=540, ay=960)
+        zc = CLOSE_H / (p.bot - p.top) * (1 + 0.05 * x + 0.025 * decay(u, TL.CLOSE, 0.1))
+        drift = (1 if i % 2 == 0 else -1) * lerp(-16, 16, ease_in_out(x))
+        return Cam(z=zc, fx=p.cx + drift, fy=p.bot, ax=540, ay=CAN_BOTTOM_LIMIT - 4)   # push-in anchored at the base
     zm = keys(u, [(TL.MEDIUM, 1.28), (TL.MEDIUM + 0.22, 1.05), (TL.SCENE, 1.03)], ease_out_expo)
     return wide_cam(p, zm, dx=-6 * np.sin(u * 2 + i))
 
 
+def keep_clear(cam, p):
+    """Lift the shot if the can's base would dip below CAN_BOTTOM_LIMIT (the price banner zone)."""
+    bottom = (p.bot - cam.fy) * cam.z + cam.ay
+    if bottom > CAN_BOTTOM_LIMIT:
+        cam.ay -= bottom - CAN_BOTTOM_LIMIT
+    return cam
+
+
+def render_plate(p, cam, *args, **kw):
+    keep_clear(cam, p)
+    return p.render(cam, *args, **kw)
+
+
+def hwhip_out(u, direction):
+    """Sideways exit whip for the last 0.27 s of a scene (direction -1 = content leaves to the left)."""
+    if u < TL.EXIT:
+        return 0.0, 0.0
+    k = ease_in_cubic(lin(u, TL.EXIT, TL.SCENE - 0.02))
+    return direction * 1500 * k, 10 + 210 * k
+
+
+def hwhip_in(u, direction):
+    """Sideways entry whip (direction +1 = content arrives from the right)."""
+    if u >= 0.27:
+        return 0.0, 0.0
+    k = 1 - ease_out_cubic(u / 0.27)
+    return direction * 1500 * k, 220 * k
+
+
 def shaken(cam, t, amp, seed=0.0):
     dx, dy = R.shake(t, min(amp, 16), seed)
-    cam.ax += dx * 0.5          # mostly vertical shake: never pushes the can into the badge margin
+    cam.ax += dx * 0.5
     cam.ay += dy
     return cam
 
@@ -120,29 +142,25 @@ def tag(canvas, t, t_in, t_out, name, glow):
 
 # ------------------------------------------------------------- price label
 @lru_cache(maxsize=1)
-def badge_layers():
-    """Retail price tag, drawn once at 3x then downsampled. Returns premultiplied RGB, alpha, shadow."""
+def banner_layers():
+    """Bottom-centre retail price banner, drawn once at 3x then downsampled.
+    Returns premultiplied RGB, alpha, shadow, glow, pad."""
     S = 3
-    w, h = BADGE_W * S, BADGE_H * S
-    r = 22 * S
+    w, h = BANNER_W * S, BANNER_H * S
+    r = 26 * S
     body = Image.new("L", (w, h), 0)
     ImageDraw.Draw(body).rounded_rectangle((0, 0, w - 1, h - 1), r, fill=255)
     m = np.asarray(body).astype(np.float32) / 255
     yy = np.linspace(0, 1, h, dtype=np.float32)[:, None, None]
-    rgb = np.array([0.93, 0.13, 0.17], np.float32) * (1 - yy) + np.array([0.60, 0.03, 0.08], np.float32) * yy
+    rgb = np.array([0.93, 0.13, 0.17], np.float32) * (1 - yy) + np.array([0.62, 0.03, 0.08], np.float32) * yy
     rgb = np.broadcast_to(rgb, (h, w, 3)).copy()
-    # bottom strip for BEFORE TAXES
-    strip_y0 = int(h * 0.735)
-    rgb[strip_y0:] = np.array([0.30, 0.01, 0.05], np.float32)
-    # gold inner border
+    strip_y0 = int(h * 0.665)
+    rgb[strip_y0:] = np.array([0.30, 0.01, 0.05], np.float32)          # BEFORE TAXES strip
     border = Image.new("L", (w, h), 0)
     ImageDraw.Draw(border).rounded_rectangle((7 * S, 7 * S, w - 1 - 7 * S, h - 1 - 7 * S), r - 6 * S, outline=255, width=3 * S)
     bm = np.asarray(border).astype(np.float32)[..., None] / 255
-    gold = np.array([1.0, 0.82, 0.36], np.float32)
-    rgb = rgb * (1 - bm) + gold * bm
-    # glossy top highlight
-    gl = np.clip(1 - yy[..., 0] / 0.42, 0, 1) ** 2 * 0.16
-    rgb = rgb + gl[..., None]
+    rgb = rgb * (1 - bm) + np.array([1.0, 0.82, 0.36], np.float32) * bm
+    rgb = rgb + (np.clip(1 - yy[..., 0] / 0.42, 0, 1) ** 2 * 0.16)[..., None]   # glossy top highlight
 
     def text_mask(txt, font, size, tracking=0.0):
         f = fx.font(font, size)
@@ -157,57 +175,65 @@ def badge_layers():
             x += a_ + tracking * size
         a_ = np.asarray(im).astype(np.float32) / 255
         ys = np.where(a_.max(1) > 0.02)[0]
-        return a_[ys[0]:ys[-1] + 1]
+        xs = np.where(a_.max(0) > 0.02)[0]
+        return a_[ys[0]:ys[-1] + 1, xs[0]:xs[-1] + 1]
 
     def paste(mask, cx, cy, color):
-        nonlocal rgb
         mh, mw = mask.shape
         x0, y0 = int(cx - mw / 2), int(cy - mh / 2)
-        reg = rgb[y0:y0 + mh, x0:x0 + mw]
-        if callable(color):
-            col = color(mh, mw)
-        else:
-            col = np.broadcast_to(np.array(color, np.float32), (mh, mw, 3))
-        # drop shadow
+        col = color(mh, mw) if callable(color) else np.broadcast_to(np.array(color, np.float32), (mh, mw, 3))
         sh = cv2.GaussianBlur(mask, (0, 0), 2.5 * S) * 0.55
         rs = rgb[y0 + 2 * S:y0 + 2 * S + mh, x0 + S:x0 + S + mw]
         rs *= (1 - sh[:rs.shape[0], :rs.shape[1], None])
+        reg = rgb[y0:y0 + mh, x0:x0 + mw]
         reg[:] = reg * (1 - mask[..., None]) + col * mask[..., None]
 
-    inner_w = (BADGE_W - 30) * S
-    s_2for = fit_size("2 FOR", "InterDisplay-Black.otf", inner_w, 46 * S)
-    s_price = fit_size("$5.99", "InterDisplay-Black.otf", inner_w, 74 * S)
-    s_sub = fit_size("BEFORE TAXES", "InterDisplay-Bold.otf", inner_w, 20 * S, tracking=0.06)
-    paste(text_mask("2 FOR", "InterDisplay-Black.otf", s_2for), w / 2, h * 0.205, (1, 1, 1))
-    price_grad = lambda mh, mw: (np.array([1.0, 0.97, 0.70], np.float32) * (1 - np.linspace(0, 1, mh, dtype=np.float32)[:, None, None])
-                                 + np.array([1.0, 0.78, 0.22], np.float32) * np.linspace(0, 1, mh, dtype=np.float32)[:, None, None]) * np.ones((1, mw, 1), np.float32)
-    paste(text_mask("$5.99", "InterDisplay-Black.otf", s_price), w / 2, h * 0.47, price_grad)
-    paste(text_mask("BEFORE TAXES", "InterDisplay-Bold.otf", s_sub, tracking=0.06), w / 2, (strip_y0 + h - 7 * S) / 2, (1, 1, 1))
+    # top row: "2 FOR" (white) + "$5.99" (gold, largest) side by side
+    row_h = strip_y0 - 10 * S
+    k = 1.0
+    while True:
+        m2 = text_mask("2 FOR", "InterDisplay-Black.otf", int(54 * S * k))
+        mp = text_mask("$5.99", "InterDisplay-Black.otf", int(84 * S * k))
+        gap = int(20 * S * k)
+        if m2.shape[1] + gap + mp.shape[1] <= (BANNER_W - 70) * S and mp.shape[0] <= 0.78 * row_h:
+            break
+        k *= 0.96
+    total = m2.shape[1] + gap + mp.shape[1]
+    row_cy = 7 * S + row_h / 2 + 2 * S
+    x_left = w / 2 - total / 2
+    paste(m2, x_left + m2.shape[1] / 2, row_cy, (1, 1, 1))
+    gold = lambda mh, mw: ((np.array([1.0, 0.97, 0.70], np.float32) * (1 - np.linspace(0, 1, mh, dtype=np.float32)[:, None, None])
+                            + np.array([1.0, 0.78, 0.22], np.float32) * np.linspace(0, 1, mh, dtype=np.float32)[:, None, None])
+                           * np.ones((1, mw, 1), np.float32))
+    paste(mp, x_left + m2.shape[1] + gap + mp.shape[1] / 2, row_cy, gold)
+    sub = text_mask("BEFORE TAXES", "InterDisplay-Bold.otf", 23 * S, tracking=0.16)
+    paste(sub, w / 2, (strip_y0 + h - 7 * S) / 2, (1, 1, 1))
     rgb = np.clip(rgb, 0, 1)
-    out_rgb = cv2.resize(rgb * m[..., None], (BADGE_W, BADGE_H), interpolation=cv2.INTER_AREA)
-    out_a = cv2.resize(m, (BADGE_W, BADGE_H), interpolation=cv2.INTER_AREA)
+    out_rgb = cv2.resize(rgb * m[..., None], (BANNER_W, BANNER_H), interpolation=cv2.INTER_AREA)
+    out_a = cv2.resize(m, (BANNER_W, BANNER_H), interpolation=cv2.INTER_AREA)
     pad = 40
-    sh = np.zeros((BADGE_H + 2 * pad, BADGE_W + 2 * pad), np.float32)
-    sh[pad:pad + BADGE_H, pad:pad + BADGE_W] = out_a
-    shadow = cv2.GaussianBlur(sh, (0, 0), 12)
-    glow = cv2.GaussianBlur(sh, (0, 0), 22)
-    return out_rgb.astype(np.float32), out_a.astype(np.float32), shadow, glow, pad
+    shp = np.zeros((BANNER_H + 2 * pad, BANNER_W + 2 * pad), np.float32)
+    shp[pad:pad + BANNER_H, pad:pad + BANNER_W] = out_a
+    return out_rgb.astype(np.float32), out_a.astype(np.float32), cv2.GaussianBlur(shp, (0, 0), 12), cv2.GaussianBlur(shp, (0, 0), 22), pad
 
 
-def draw_badge(img, t):
-    """Composite the price label onto the finished frame (every frame, never faded)."""
-    rgb, a, shadow, glow, pad = badge_layers()
+def banner_visibility(t):
+    """1 on every frame until the end card; slides down and fades out by the time the logo appears."""
+    return 1 - ease_in_cubic(lin(t, TL.END_START, TL.END_LOGO))
+
+
+def draw_banner(img, t):
+    """Composite the price banner onto the finished frame."""
+    vis = banner_visibility(t)
+    if vis <= 0.001:
+        return img
+    rgb, a, shadow, glow, pad = banner_layers()
     beat_hits = [w for w, _ in TL.INTRO_WORDS] + [TL.DROP + k * TL.BAR for k in range(40)]
-    pulse = 1 + max(0.045 * decay(t, h, 0.12) for h in beat_hits if t >= h) if t >= beat_hits[0] else 1.0
-    sc = pulse
-    if abs(sc - 1) > 1e-3:
-        rgb = cv2.resize(rgb, None, fx=sc, fy=sc, interpolation=cv2.INTER_LINEAR)
-        a = cv2.resize(a, None, fx=sc, fy=sc, interpolation=cv2.INTER_LINEAR)
-        shadow = cv2.resize(shadow, None, fx=sc, fy=sc, interpolation=cv2.INTER_LINEAR)
-        glow = cv2.resize(glow, None, fx=sc, fy=sc, interpolation=cv2.INTER_LINEAR)
-    bh, bw = a.shape
-    x0, y0 = int(round(BADGE_CX - bw / 2)), int(round(BADGE_CY - bh / 2))
-    sh_h, sh_w = shadow.shape
+    pulse = 1 + max(0.04 * decay(t, h, 0.12) for h in beat_hits if t >= h) if t >= beat_hits[0] else 1.0
+    if abs(pulse - 1) > 1e-3:
+        rgb, a, shadow, glow = (cv2.resize(x, None, fx=pulse, fy=pulse, interpolation=cv2.INTER_LINEAR) for x in (rgb, a, shadow, glow))
+    rgb, a, shadow, glow = rgb * vis, a * vis, shadow * vis, glow * vis
+    cy = BANNER_CY + 60 * (1 - vis)
 
     def clip_op(layer, x0_, y0_, fn):
         lh, lw = layer.shape[:2]
@@ -216,25 +242,29 @@ def draw_badge(img, t):
         if cx1 > cx0 and cy1 > cy0:
             fn(img[cy0:cy1, cx0:cx1], layer[cy0 - y0_:cy1 - y0_, cx0 - x0_:cx1 - x0_])
 
-    gx0, gy0 = int(round(BADGE_CX - sh_w / 2)), int(round(BADGE_CY - sh_h / 2))
-
     def mul(roi_, l_):
         roi_ *= (1 - 0.6 * l_)[..., None]
 
     def add(roi_, l_):
-        roi_ += l_[..., None] * np.array([1.0, 0.25, 0.2], np.float32) * (0.22 + 0.25 * (pulse - 1) / 0.045)
+        roi_ += l_[..., None] * np.array([1.0, 0.25, 0.2], np.float32) * (0.22 + 0.25 * (pulse - 1) / 0.04)
+
+    def over(roi_, l_):
+        roi_ *= (1 - l_[..., 3:4])
+        roi_ += l_[..., :3]
+    sh_h, sh_w = shadow.shape
+    gx0, gy0 = int(round(BANNER_CX - sh_w / 2)), int(round(cy - sh_h / 2))
     clip_op(shadow, gx0, gy0 + 8, mul)
     clip_op(glow, gx0, gy0, add)
-    roi = img[y0:y0 + bh, x0:x0 + bw]
-    roi *= (1 - a[..., None])
-    roi += rgb
-    # shine sweep every 3 s
-    ph = (t % 3.0) / 0.6
+    bh, bw = a.shape
+    x0, y0 = int(round(BANNER_CX - bw / 2)), int(round(cy - bh / 2))
+    lay = np.dstack([rgb, a])
+    ph = (t % 3.0) / 0.6                                     # shine sweep every 3 s
     if ph < 1:
         xx = np.arange(bw, dtype=np.float32)[None, :] / bw
         yy = np.arange(bh, dtype=np.float32)[:, None] / bh
-        band = np.exp(-((xx + 0.4 * yy - lerp(-0.4, 1.4, ease_in_out(ph))) / 0.07) ** 2) * a * 0.32
-        roi += band[..., None]
+        band = np.exp(-((xx + 0.25 * yy - lerp(-0.3, 1.3, ease_in_out(ph))) / 0.05) ** 2) * a * 0.3
+        lay[..., :3] += band[..., None]
+    clip_op(lay, x0, y0, over)
     return img
 
 
@@ -366,7 +396,8 @@ def scene1(t, fi):
     pre = t < TL.DROP
     u = t - s
     if pre:
-        cam = wide_cam(p, keys(t, [(0, 0.92), (2.95, 1.0)]), ay=CAN_CY + 250 - 40 * smooth(t / 3))
+        zm = keys(t, [(0, 0.77), (2.95, 0.835)])
+        cam = wide_cam(p, zm, ay=1610 - 0.5 * CAN_H * zm)
     else:
         cam = scene_cam(i, t)
         if u < TL.CLOSE:
@@ -393,7 +424,7 @@ def scene1(t, fi):
         sweep = [(keys(t, [(0.4, -1.9), (1.8, 1.9)]), 0.42, 1.2 * smooth(lin(t, 0.35, 0.6)) * (1 - smooth(lin(t, 1.65, 1.9)))),
                  (keys(t, [(1.8, 1.9), (2.8, -1.9)]), 0.5, 1.1 * smooth(lin(t, 1.75, 1.95)))]
         rs = 0.15 + 1.0 * smooth(rev)
-        canvas = p.render(cam, behind, amb_bg=0.05 + 0.18 * ease_in_cubic(rev),
+        canvas = render_plate(p, cam, behind, amb_bg=0.05 + 0.18 * ease_in_cubic(rev),
                           amb_can=0.03 + 0.3 * ease_in_cubic(rev) + 0.5 * ease_in_expo(lin(t, 2.6, 3.0)),
                           amb_props=0.04 + 0.2 * ease_in_cubic(rev), sweep=sweep,
                           rim_l=tuple(np.array(TEAL) * rs * 0.8), rim_r=tuple(np.array(PINK) * rs), protect=False)
@@ -413,7 +444,7 @@ def scene1(t, fi):
         post["ca"] = sum(6 * decay(t, w, 0.1) for w, _ in TL.INTRO_WORDS)
         return canvas, post
 
-    canvas = p.render(cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(0.2, 0.6, 0.6), rim_r=(0.6, 0.25, 0.45))
+    canvas = render_plate(p, cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(0.2, 0.6, 0.6), rim_r=(0.6, 0.25, 0.45))
     fg_drops(canvas, cam, u, origin, PINK, PINK_D, blur=6.0 if u < TL.CLOSE else 10.0)
     R2.can_open_fx(canvas, cam, p, t, TL.CAN_OPENS[0], (1.0, 0.92, 0.97))
     tag(canvas, t, s + 0.22, s + 0.98, TL.PRODUCTS[i]["name"], PINK)
@@ -469,21 +500,21 @@ def scene2(t, fi):
     cam = scene_cam(i, t)
     if u < 0.45:
         cam.z *= lerp(1.15, 1.0, ease_out_cubic(u / 0.45))
-    sy_out, vb = vwhip_out(u, -1)
-    cam.ay += sy_out
+    sx_out, hb = hwhip_out(u, -1)
+    cam.ax += sx_out
     shaken(cam, t, 10 * decay(t, s, 0.12) + 8 * decay(t, s + TL.CLOSE, 0.1))
 
     def behind(cv):
         carnival_lights(cv, cam, t, p)
         R.bokeh(cv, t, 8, 18, [(0.8, 0.4, 1.0), (0.3, 0.9, 0.95), (1.0, 0.8, 0.4)], cam, inten=0.11)
         R.god_rays(cv, t, *cam.p(p.cx, p.top + 300), (0.8, 0.55, 1.0), 0.14, n=10, speed=-0.04)
-    canvas = p.render(cam, behind, spec=lerp(0.6, -0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(0.6, 0.3, 0.9), rim_r=(0.25, 0.8, 0.85),
-                      backdrop_shift=(0, sy_out * 0.5))
+    canvas = render_plate(p, cam, behind, spec=lerp(0.6, -0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(0.6, 0.3, 0.9), rim_r=(0.25, 0.8, 0.85),
+                      backdrop_shift=(sx_out * 0.5, 0))
     confetti(canvas, t, u)
     tag(canvas, t, s + 0.3, s + 0.98, TL.PRODUCTS[i]["name"], (0.7, 0.4, 1.0))
     liquid_wave(canvas, t, s - 0.4, s, s + 0.45, PAL_PURPLE)
-    if vb > 1:
-        canvas = vblur(canvas, vb)
+    if hb > 1:
+        canvas = hblur(canvas, hb)
     post["flash"] = 0.3 * decay(t, s, 0.08) + 0.25 * decay(t, s + TL.CLOSE, 0.05) + 0.25 * decay(t, s + TL.MEDIUM, 0.05)
     post["ca"] = 6 * decay(t, s + TL.CLOSE, 0.1) + 8 * lin(u, TL.EXIT, TL.SCENE)
     return canvas, post
@@ -500,8 +531,8 @@ def scene3(t, fi):
     post = dict(flash=0.0, ca=0.0)
     u = t - s
     cam = scene_cam(i, t)
-    sy_in, vb_in = vwhip_in(u, +1)
-    cam.ay += sy_in
+    sx_in, hb_in = hwhip_in(u, +1)
+    cam.ax += sx_in
     shaken(cam, t, 8 * decay(t, s + TL.CLOSE, 0.1))
 
     def behind(cv):
@@ -510,8 +541,8 @@ def scene3(t, fi):
         R2.smoke(cv, t, 0.45, (0.25, 0.08, 0.35), seed=81, sx=30, sy=-50)
         bubbles(cv, cam, u, p, 41, 34, tint=(0.6, 1.0, 0.45), smin=14, smax=34, spd=(260, 520))
         R2.embers(cv, u, 9, 34, cam, (p.cx, p.top + 560), color=(0.7, 0.3, 1.0), mode="orbit", front=False, inten=0.9)
-    canvas = p.render(cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.15, rim_l=(0.6, 0.3, 0.9), rim_r=(0.4, 1.0, 0.3),
-                      backdrop_shift=(0, sy_in * 0.5))
+    canvas = render_plate(p, cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.15, rim_l=(0.6, 0.3, 0.9), rim_r=(0.4, 1.0, 0.3),
+                      backdrop_shift=(sx_in * 0.5, 0))
     R2.embers(canvas, u, 9, 34, cam, (p.cx, p.top + 560), color=(0.7, 0.3, 1.0), mode="orbit", front=True)
     bubbles(canvas, cam, u, p, 42, 14, tint=(0.6, 1.0, 0.45), smin=24, smax=60, spd=(300, 560), blur=0.6, alpha=0.9)
     # green smoke wipe out
@@ -524,8 +555,8 @@ def scene3(t, fi):
     a = np.clip(n * dens + wipe ** 1.5 * 1.3, 0, 1)[..., None]
     canvas = canvas * (1 - a) + a * np.array([0.10, 0.22, 0.06], np.float32)
     tag(canvas, t, s + 0.3, s + 0.98, TL.PRODUCTS[i]["name"], GREEN)
-    if vb_in > 1:
-        canvas = vblur(canvas, vb_in)
+    if hb_in > 1:
+        canvas = hblur(canvas, hb_in)
     post["flash"] = 0.35 * decay(t, s, 0.08) + 0.25 * decay(t, s + TL.CLOSE, 0.05) + 0.2 * decay(t, s + TL.MEDIUM, 0.05)
     post["ca"] = 8 * (1 - lin(u, 0, 0.3)) + 5 * decay(t, s + TL.CLOSE, 0.1)
     return canvas, post
@@ -567,8 +598,8 @@ def scene4(t, fi):
     post = dict(flash=0.0, ca=0.0)
     u = t - s
     cam = scene_cam(i, t)
-    sy_out, vb = vwhip_out(u, +1)
-    cam.ay += sy_out
+    sx_out, hb = hwhip_out(u, +1)
+    cam.ax += sx_out
     shaken(cam, t, 8 * decay(t, s + TL.CLOSE, 0.1) + sum(5 * decay(t, h, 0.08) for h in TL.ICE_HITS_S4))
 
     def behind(cv):
@@ -581,8 +612,8 @@ def scene4(t, fi):
                 if st:
                     x, y = cam.p(st[0], st[1])
                     draw_ice(cv, x, y, cam.s(o["size"]), *st[2], blur=2.5, alpha=0.85)
-    canvas = p.render(cam, behind, spec=lerp(0.6, -0.6, lin(t, s, s + TL.SCENE)), spec_s=0.18, rim_l=(0.5, 0.85, 1.0), rim_r=(1.0, 0.4, 0.6),
-                      backdrop_shift=(0, sy_out * 0.5))
+    canvas = render_plate(p, cam, behind, spec=lerp(0.6, -0.6, lin(t, s, s + TL.SCENE)), spec_s=0.18, rim_l=(0.5, 0.85, 1.0), rim_r=(1.0, 0.4, 0.6),
+                      backdrop_shift=(sx_out * 0.5, 0))
     xx, yy = fx.grid()
     fy_ = cam.p(0, p.bot)[1]
     fog = np.clip(1 - np.abs(yy - fy_) / cam.s(240), 0, 1) ** 1.2 * 0.42
@@ -598,8 +629,8 @@ def scene4(t, fi):
     if u < 0.42:
         R2.smoke(canvas, t, 3.0 * (1 - ease_out_cubic(u / 0.42)), (0.10, 0.22, 0.06), seed=87)
     tag(canvas, t, s + 0.32, s + 0.98, TL.PRODUCTS[i]["name"], (0.4, 0.85, 1.0))
-    if vb > 1:
-        canvas = vblur(canvas, vb)
+    if hb > 1:
+        canvas = hblur(canvas, hb)
     post["flash"] = 0.25 * decay(t, s + TL.CLOSE, 0.05) + 0.2 * decay(t, s + TL.MEDIUM, 0.05)
     post["flash_color"] = (0.95, 0.98, 1.0)
     post["ca"] = 5 * decay(t, s + TL.CLOSE, 0.1) + 8 * lin(u, TL.EXIT, TL.SCENE)
@@ -618,8 +649,8 @@ def scene5(t, fi):
     post = dict(flash=0.0, ca=0.0)
     u = t - s
     cam = scene_cam(i, t)
-    sy_in, vb_in = vwhip_in(u, -1)
-    cam.ay += sy_in
+    sx_in, hb_in = hwhip_in(u, -1)
+    cam.ax += sx_in
     shaken(cam, t, 16 * decay(t, s + 0.05, 0.12) + 8 * decay(t, s + TL.CLOSE, 0.1))
     origin = (p.cx, p.top + (p.bot - p.top) * 0.42)
     flare = ease_in_cubic(lin(u, TL.SCENE - 0.35, TL.SCENE))
@@ -629,8 +660,8 @@ def scene5(t, fi):
         add_glow(cv, *cam.p(p.cx - 300, p.top), cam.s(700), (1.0, 0.65, 0.25), 0.3)
         splash_two_tone(cv, cam, max(0.0, u - 0.05), origin, ORANGE, CORAL, ORANGE_D, CORAL_D, core=False)
         bubbles(cv, cam, u, p, 51, 26, tint=(1.0, 0.85, 0.6), smin=10, smax=26, spd=(240, 460))
-    canvas = p.render(cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(1.0, 0.6, 0.25), rim_r=(1.0, 0.4, 0.5),
-                      backdrop_shift=(0, sy_in * 0.5))
+    canvas = render_plate(p, cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(1.0, 0.6, 0.25), rim_r=(1.0, 0.4, 0.5),
+                      backdrop_shift=(sx_in * 0.5, 0))
     fg_drops(canvas, cam, max(0.0, u - 0.05), origin, ORANGE, ORANGE_D, blur=6.0 if u < TL.CLOSE else 10.0)
     bubbles(canvas, cam, u, p, 52, 10, tint=(1.0, 0.9, 0.7), smin=22, smax=50, spd=(300, 520), blur=0.5, alpha=0.95)
     if flare > 0:   # sun-flare burst transition
@@ -638,8 +669,8 @@ def scene5(t, fi):
         add_glow(canvas, sx, sy, 300 + 1700 * flare, (1.0, 0.8, 0.45), 1.6 * flare)
         add_glow(canvas, sx, sy, 900 + 1200 * flare, (1.0, 0.95, 0.8), 1.2 * flare, sx=1.0, sy=0.06)
     tag(canvas, t, s + 0.3, s + 0.98, TL.PRODUCTS[i]["name"], ORANGE)
-    if vb_in > 1:
-        canvas = vblur(canvas, vb_in)
+    if hb_in > 1:
+        canvas = hblur(canvas, hb_in)
     post["flash"] = 0.3 * decay(t, s, 0.08) + 0.25 * decay(t, s + TL.CLOSE, 0.05) + 0.2 * decay(t, s + TL.MEDIUM, 0.05) + ease_in_expo(flare) * 0.95
     post["flash_color"] = (1.0, 0.93, 0.8)
     post["ca"] = 8 * (1 - lin(u, 0, 0.3)) + 5 * decay(t, s + TL.CLOSE, 0.1)
@@ -664,7 +695,7 @@ def scene6(t, fi):
         cv *= 0.8 + 0.6 * fl
         R.god_rays(cv, t, *cam.p(p.cx, p.top + 300), (0.5, 1.0, 0.95), 0.12 + 0.3 * fl, n=16, speed=0.12, sharp=14)
         R2.bolts(cv, cam, t, TL.STRIKES_S6, p, color=(0.35, 1.0, 0.95), big=(s,))
-    canvas = p.render(cam, behind, amb_bg=0.85, spec=lerp(0.6, -0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16,
+    canvas = render_plate(p, cam, behind, amb_bg=0.85, spec=lerp(0.6, -0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16,
                       rim_l=tuple(np.array([0.3, 1.0, 0.95]) * (0.5 + 1.2 * fl)), rim_r=tuple(np.array([1.0, 0.3, 0.35]) * (0.5 + 0.8 * fl)),
                       hero_gain=1.0 + 0.1 * fl)
     R2.sparks(canvas, cam, t, TL.STRIKES_S6, (p.cx, p.bot - 60), color=(1.0, 0.4, 0.45), n=38)
@@ -720,7 +751,7 @@ def scene7(t, fi):
             drops.append((x0 + 20 * np.sin(u * 2 + j), (rr.uniform(-100, 1300) + rr.uniform(90, 200) * u) % 1450 - 60, rr.uniform(8, 18)))
         render_liquid(cv, discs=R.cam_discs(cam, drops), color=BLUE, dark=BLUE_D, sigma=2.8, thr=(0.3, 0.52), bump=30)
         R.mist_layer(cv, t, np.full((H, W), 0.16, np.float32), color=(0.7, 0.85, 1.0), seed=71, sx=20, sy=-10)
-    canvas = p.render(cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.18, rim_l=(0.3, 0.6, 1.0), rim_r=(0.3, 0.95, 1.0))
+    canvas = render_plate(p, cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.18, rim_l=(0.3, 0.6, 1.0), rim_r=(0.3, 0.95, 1.0))
     rr = np.random.default_rng(23)
     fdrops = [(rr.uniform(0, 1122), (rr.uniform(-100, 1300) + rr.uniform(160, 280) * u) % 1450 - 60, rr.uniform(16, 30)) for _ in range(8)]
     render_liquid(canvas, discs=R.cam_discs(cam, fdrops), color=(0.3, 0.7, 1.0), dark=BLUE_D, sigma=3.0, thr=(0.3, 0.52), bump=30,
@@ -765,8 +796,8 @@ def scene8(t, fi):
     post = dict(flash=0.0, ca=0.0)
     u = t - s
     cam = scene_cam(i, t)
-    sy_out, vb = vwhip_out(u, -1)
-    cam.ay += sy_out
+    sx_out, hb = hwhip_out(u, -1)
+    cam.ax += sx_out
     shaken(cam, t, 8 * decay(t, s + TL.CLOSE, 0.1))
     warp_in = 1 - ease_out_cubic(lin(u, 0, 0.5))
 
@@ -774,13 +805,13 @@ def scene8(t, fi):
         cv += nebula() * 0.28 * (0.8 + 0.2 * np.sin(t * 0.8))
         starfield(cv, t)
         R2.embers(cv, u, 12, 30, cam, (p.cx, p.top + 560), color=(0.5, 0.9, 1.0), mode="orbit", front=False, inten=0.8)
-    canvas = p.render(cam, behind, spec=lerp(0.6, -0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(0.7, 0.4, 1.0), rim_r=(0.3, 0.95, 0.95),
-                      backdrop_shift=(0, sy_out * 0.5))
+    canvas = render_plate(p, cam, behind, spec=lerp(0.6, -0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(0.7, 0.4, 1.0), rim_r=(0.3, 0.95, 0.95),
+                      backdrop_shift=(sx_out * 0.5, 0))
     R2.embers(canvas, u, 12, 30, cam, (p.cx, p.top + 560), color=(0.5, 0.9, 1.0), mode="orbit", front=True, inten=0.8)
     warp_streaks(canvas, warp_in, col=(0.85, 0.8, 1.0))
     tag(canvas, t, s + 0.4, s + 0.98, TL.PRODUCTS[i]["name"], (0.75, 0.45, 1.0))
-    if vb > 1:
-        canvas = vblur(canvas, vb)
+    if hb > 1:
+        canvas = hblur(canvas, hb)
     post["flash"] = (1 - ease_out_cubic(lin(u, 0, 0.24))) * 0.95 + 0.25 * decay(t, s + TL.CLOSE, 0.05) + 0.2 * decay(t, s + TL.MEDIUM, 0.05)
     post["flash_color"] = (0.9, 0.85, 1.0)
     post["ca"] = 12 * warp_in + 5 * decay(t, s + TL.CLOSE, 0.1) + 8 * lin(u, TL.EXIT, TL.SCENE)
@@ -799,9 +830,10 @@ def scene9(t, fi):
     post = dict(flash=0.0, ca=0.0)
     u = t - s
     cam = scene_cam(i, t)
-    sy_in, vb_in = vwhip_in(u, +1)
+    sx_in, hb_in = hwhip_in(u, +1)
     sy_out, vb_out = vwhip_out(u, -1)
-    cam.ay += sy_in + sy_out
+    cam.ax += sx_in
+    cam.ay += sy_out
     shaken(cam, t, 16 * decay(t, s + 0.05, 0.13) + 8 * decay(t, TL.CAN_OPENS[1], 0.1))
     origin = (p.cx, p.top + (p.bot - p.top) * 0.62)
 
@@ -810,14 +842,15 @@ def scene9(t, fi):
         R.bokeh(cv, t, 21, 16, [WM_PINK, WM_TEAL, (0.6, 1.0, 0.4)], cam, inten=0.1)
         splash_two_tone(cv, cam, max(0.0, u - 0.05), origin, WM_PINK, WM_TEAL, WM_PINK_D, WM_TEAL_D, core=False)
         bubbles(cv, cam, u, p, 61, 22, tint=(1.0, 0.85, 0.9), smin=10, smax=26, spd=(240, 460))
-    canvas = p.render(cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(0.3, 0.9, 0.8), rim_r=(1.0, 0.35, 0.55),
-                      backdrop_shift=(0, (sy_in + sy_out) * 0.5))
+    canvas = render_plate(p, cam, behind, spec=lerp(-0.6, 0.6, lin(t, s, s + TL.SCENE)), spec_s=0.16, rim_l=(0.3, 0.9, 0.8), rim_r=(1.0, 0.35, 0.55),
+                      backdrop_shift=(sx_in * 0.5, sy_out * 0.5))
     fg_drops(canvas, cam, max(0.0, u - 0.05), origin, WM_PINK, WM_PINK_D, blur=6.0 if u < TL.CLOSE else 10.0)
     R2.can_open_fx(canvas, cam, p, t, TL.CAN_OPENS[1], (1.0, 0.9, 0.95))
     tag(canvas, t, s + 0.3, s + 0.98, TL.PRODUCTS[i]["name"], WM_PINK)
-    vb = max(vb_in, vb_out)
-    if vb > 1:
-        canvas = vblur(canvas, vb)
+    if hb_in > 1:
+        canvas = hblur(canvas, hb_in)
+    if vb_out > 1:
+        canvas = vblur(canvas, vb_out)
     post["flash"] = 0.3 * decay(t, s, 0.08) + 0.25 * decay(t, s + TL.CLOSE, 0.05) + 0.2 * decay(t, s + TL.MEDIUM, 0.05)
     post["flash"] += 0.85 * ease_in_expo(lin(u, TL.SCENE - 0.15, TL.SCENE))
     post["ca"] = 8 * (1 - lin(u, 0, 0.3)) + 5 * decay(t, s + TL.CLOSE, 0.1) + 8 * lin(u, TL.EXIT, TL.SCENE)
@@ -826,11 +859,13 @@ def scene9(t, fi):
 
 # ------------------------------------------------------------- end card
 LOGO_W = 800
-ADDR = ("153 Great Northern Rd,", "Sault Ste. Marie, ON P6B 4Y9")
+ADDRS = [("153 Great Northern Rd,", "Sault Ste. Marie, ON P6B 4Y9"),
+         ("216 Second Line West,", "Sault Ste. Marie, ON P6C 2J3")]
 CTA1, CTA2 = "STOP BY & GRAB", "YOUR FAVOURITES!"
 LEAKS3 = [((1.0, 0.36, 0.72), 120, 380), ((0.25, 0.9, 0.9), 980, 520), ((0.62, 0.3, 1.0), 160, 1500), ((1.0, 0.55, 0.15), 950, 1650)]
-LOGO_CY, ADDR_CY, OFFER_CY, SUB_CY, CTA_CY = 520, 812, 1000, 1094, 1290
-ROW_CX = 600      # rows beside the price label are centred right of the label column
+LOGO_CY, OFFER_CY, SUB_CY, CTA_CY = 520, 1140, 1232, 1392
+ADDR_YS = (820, 970)
+ROW_CX = 540
 
 
 @lru_cache(maxsize=1)
@@ -891,16 +926,19 @@ def end_card(t, fi):
                 xx = np.arange(L["w"], dtype=np.float32)[None, :] / L["w"]
                 yy = np.arange(L["h"], dtype=np.float32)[:, None] / L["h"]
                 canvas += warp(np.exp(-((xx + 0.35 * yy - pos) / 0.05) ** 2) * L["a"] * 0.3)[..., None]
-    # address (pin + two lines on a glass panel)
-    ka = ease_out_cubic(lin(t, TL.END_ADDR, TL.END_ADDR + 0.42))
-    if ka > 0:
-        pin = TLOC.pin_sprite(70)
-        s_st = fit_size(ADDR[0], "InterDisplay-SemiBold.otf", 560, 56)
-        s_ct = fit_size(ADDR[1], "InterDisplay-Medium.otf", 560, 44)
-        f_st, f_ct = fx.font("InterDisplay-SemiBold.otf", s_st), fx.font("InterDisplay-Medium.otf", s_ct)
-        bw = max(f_st.getlength(ADDR[0]), f_ct.getlength(ADDR[1]))
-        row_w = pin.shape[1] + 24 + bw
-        cy = ADDR_CY + yo + 26 * (1 - ka)
+    # both store locations (pin + two lines on a glass panel each, shared width)
+    pin = TLOC.pin_sprite(70)
+    s_st = min(fit_size(a_, "InterDisplay-SemiBold.otf", 600, 56) for a_, _ in ADDRS)
+    s_ct = min(fit_size(b_, "InterDisplay-Medium.otf", 600, 44) for _, b_ in ADDRS)
+    f_st, f_ct = fx.font("InterDisplay-SemiBold.otf", s_st), fx.font("InterDisplay-Medium.otf", s_ct)
+    bw = max(max(f_st.getlength(a_), f_ct.getlength(b_)) for a_, b_ in ADDRS)
+    row_w = pin.shape[1] + 24 + bw
+    for j, ((street, city), ry) in enumerate(zip(ADDRS, ADDR_YS)):
+        t0 = TL.END_ADDR + 0.18 * j
+        ka = ease_out_cubic(lin(t, t0, t0 + 0.42))
+        if ka <= 0:
+            continue
+        cy = ry + yo + 26 * (1 - ka)
         pw, ph = int(row_w + 70), 136
         pm = TLOC.rounded_panel(pw, ph, 22)
         px0, py0 = int(ROW_CX - pw / 2), int(cy - ph / 2)
@@ -909,16 +947,16 @@ def end_card(t, fi):
         border = np.clip(cv2.GaussianBlur(pm, (0, 0), 0.8) - cv2.erode(pm, np.ones((5, 5), np.uint8)), 0, 1)
         blend_add(canvas, (border * 0.22 * ka)[..., None] * np.array([1.0, 0.92, 0.75], np.float32), px0, py0)
         x_pin = ROW_CX - row_w / 2
-        kp = ease_out_back(lin(t, TL.END_ADDR + 0.08, TL.END_ADDR + 0.45), 2.4)
+        kp = ease_out_back(lin(t, t0 + 0.08, t0 + 0.45), 2.4)
         if kp > 0:
-            pa = clamp(lin(t, TL.END_ADDR + 0.08, TL.END_ADDR + 0.2))
+            pa = clamp(lin(t, t0 + 0.08, t0 + 0.2))
             add_glow(canvas, x_pin + pin.shape[1] / 2, cy + 4, 46, (1.0, 0.3, 0.3), 0.25 * pa)
             blend_over(canvas, pin[..., :3] * pa, pin[..., 3] * pa, int(x_pin), int(cy - pin.shape[0] / 2 - 46 * (1 - kp)))
         x_txt = x_pin + pin.shape[1] + 24
-        TLOC.text_left(canvas, ADDR[0], "InterDisplay-SemiBold.otf", s_st, x_txt, cy - s_ct * 0.62, alpha=ka, blur=(1 - ka) * 5, shadow=0.45)
-        TLOC.text_left(canvas, ADDR[1], "InterDisplay-Medium.otf", s_ct, x_txt, cy + s_st * 0.52, alpha=ka * 0.9,
+        TLOC.text_left(canvas, street, "InterDisplay-SemiBold.otf", s_st, x_txt, cy - s_ct * 0.62, alpha=ka, blur=(1 - ka) * 5, shadow=0.45)
+        TLOC.text_left(canvas, city, "InterDisplay-Medium.otf", s_ct, x_txt, cy + s_st * 0.52, alpha=ka * 0.9,
                        color=(0.92, 0.9, 0.95), blur=(1 - ka) * 5, shadow=0.45)
-    # offer (kept right of the price label column)
+    # offer
     ko = ease_out_back(lin(t, TL.END_OFFER, TL.END_OFFER + 0.4), 1.8)
     koa = clamp(lin(t, TL.END_OFFER, TL.END_OFFER + 0.15))
     if koa > 0:
@@ -988,7 +1026,7 @@ def render_frame(fi):
                  ca=post.get("ca", 0), grain=post.get("grain", 0.014))
     if "fade" in post:
         img *= post["fade"]
-    img = draw_badge(img, t)
+    img = draw_banner(img, t)
     return (np.clip(img, 0, 1) * 255 + 0.5).astype(np.uint8)
 
 
