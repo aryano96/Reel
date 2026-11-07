@@ -13,9 +13,13 @@ import cv2
 from PIL import Image
 from rembg import remove, new_session
 
+import sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-SRC = os.path.join(ROOT, "assets", "reel2", "products")
-DST = os.path.join(ROOT, "assets", "reel2", "mattes")
+REEL = sys.argv[1] if len(sys.argv) > 1 else "reel2"      # e.g. "reel3"
+ROBUST = "--robust" in sys.argv   # measure the can as the solid column through the photo centre and keep
+                                  # only props near its base in the matte (splashes touching the can are dropped)
+SRC = os.path.join(ROOT, "assets", REEL, "products")
+DST = os.path.join(ROOT, "assets", REEL, "mattes")
 os.makedirs(DST, exist_ok=True)
 
 s_u2 = new_session("u2net")
@@ -44,6 +48,23 @@ for f in sorted(glob.glob(os.path.join(SRC, "*.png"))):
     c0, c1 = int(L + 0.3 * cw), int(R - 0.3 * cw)
     bottom = max(y for y in rows if core[y, c0:c1].mean() > 0.9)
 
+    if ROBUST:
+        # can sides = the two long straight vertical edges: signed horizontal gradient averaged over
+        # the mid rows is coherent along a straight edge and cancels out on splashes/background
+        gray = cv2.cvtColor(np.asarray(im), cv2.COLOR_RGB2GRAY).astype(np.float32)
+        gx = cv2.Sobel(cv2.GaussianBlur(gray, (0, 0), 1.5), cv2.CV_32F, 1, 0, ksize=3)
+        prof = np.abs(gx[int(0.30 * h):int(0.70 * h)].mean(0))
+        prof = np.convolve(prof, np.ones(3) / 3, mode="same")
+        xl = np.arange(int(0.20 * w), int(0.42 * w))
+        xr = np.arange(int(0.58 * w), int(0.80 * w))
+        if not (380 <= R - L <= 480):     # mask outline merged with props -> use the straight-edge estimate
+            L = float(xl[np.argmax(prof[xl])])
+            R = float(xr[np.argmax(prof[xr])])
+        cw = R - L
+        c0, c1 = int(L + 0.2 * cw), int(R - 0.2 * cw)
+        solid = core[:, c0:c1].mean(1) > 0.9
+        top = int(np.argmax(solid))
+        bottom = int(len(solid) - 1 - np.argmax(solid[::-1]))
     # matte = u2net (sharpened) + isnet props in a band around the can base
     m = np.clip((a_u2 - 0.25) / 0.5, 0, 1)
     band = np.zeros((h, w), np.float32)
@@ -52,6 +73,11 @@ for f in sorted(glob.glob(os.path.join(SRC, "*.png"))):
     band[by0:by1, bx0:bx1] = 1
     band = cv2.GaussianBlur(band, (0, 0), 25)
     props = np.clip((a_is - 0.2) / 0.6, 0, 1) * band
+    if ROBUST:   # above the base band keep only the can column (drops attached splashes / cups)
+        col = np.zeros((h, w), np.float32)
+        col[:, int(L) - 12:int(R) + 13] = 1
+        keep_zone = np.maximum(col, (np.arange(h)[:, None] > bottom - 300).astype(np.float32))
+        m = m * cv2.GaussianBlur(keep_zone, (0, 0), 4)
     m = np.maximum(m, props)
     # drop specks
     b = (m > 0.4).astype(np.uint8)
@@ -67,4 +93,4 @@ for f in sorted(glob.glob(os.path.join(SRC, "*.png"))):
     geo[key] = dict(left=float(L), right=float(R), top=int(top), bottom=int(bottom), cx=float((L + R) / 2), w=w, h=h)
     print(key, geo[key])
 
-json.dump(geo, open(os.path.join(ROOT, "assets", "reel2", "geometry.json"), "w"), indent=1)
+json.dump(geo, open(os.path.join(ROOT, "assets", REEL, "geometry.json"), "w"), indent=1)

@@ -1,0 +1,83 @@
+{
+ "01_cotton_candy": {
+  "left": 344.0,
+  "right": 751.0,
+  "top": 73,
+  "bottom": 1229,
+  "cx": 547.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "02_purple_cotton_candy": {
+  "left": 348.0,
+  "right": 771.0,
+  "top": 114,
+  "bottom": 1265,
+  "cx": 559.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "03_witchs_brew": {
+  "left": 336.0,
+  "right": 776.0,
+  "top": 96,
+  "bottom": 1240,
+  "cx": 556.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "04_hawaiian_shaved_ice": {
+  "left": 347.0,
+  "right": 776.0,
+  "top": 73,
+  "bottom": 1227,
+  "cx": 561.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "05_orange_kiss": {
+  "left": 341.0,
+  "right": 764.0,
+  "top": 66,
+  "bottom": 1273,
+  "cx": 552.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "06_cherry_slush": {
+  "left": 321.0,
+  "right": 757.0,
+  "top": 80,
+  "bottom": 1232,
+  "cx": 539.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "07_breezeberry": {
+  "left": 324.0,
+  "right": 749.0,
+  "top": 100,
+  "bottom": 1273,
+  "cx": 536.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "08_cosmic_stardust": {
+  "left": 331.0,
+  "right": 771.0,
+  "top": 83,
+  "bottom": 1213,
+  "cx": 551.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "09_watermelon_wave": {
+  "left": 357.0,
+  "right": 745.0,
+  "top": 115,
+  "bottom": 1189,
+  "cx": 551.0,
+  "w": 1122,
+  "h": 1402
+ }
+}

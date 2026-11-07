@@ -47,11 +47,13 @@ Z0 = 1.15      # photo -> screen scale for the hero framing
 
 # =========================================================== the photo plate
 class Plate:
-    def __init__(self, key):
+    def __init__(self, key, base=None, geo=None):
         self.key = key
-        img = np.asarray(Image.open(os.path.join(A2, "products", key + ".png")).convert("RGB")).astype(np.float32) / 255
-        a = np.asarray(Image.open(os.path.join(A2, "mattes", key + ".png"))).astype(np.float32) / 255
-        g = GEO[key]
+        base = A2 if base is None else base
+        geo = GEO if geo is None else geo
+        img = np.asarray(Image.open(os.path.join(base, "products", key + ".png")).convert("RGB")).astype(np.float32) / 255
+        a = np.asarray(Image.open(os.path.join(base, "mattes", key + ".png"))).astype(np.float32) / 255
+        g = geo[key]
         self.h, self.w = a.shape
         self.cx, self.top, self.bot = g["cx"], g["top"], g["bottom"]
         self.left, self.right = g["left"], g["right"]

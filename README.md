@@ -14,7 +14,9 @@ its own scene and only one product is ever on screen at a time.
 | **Reel 2, Final** | The Two Locations edition with the store name corrected to "EZY PZY CONVENIENCE" in every drink scene | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Final_Reel.mp4` |
 | **Reel 2, Logo Final** (latest) | The Final Reel with the store-name text line under each product name replaced by the store logo | 30.0 s | `output/reel2/Ezy_Pzy_Convenience_Logo_Final_Reel.mp4` |
 
-Both videos are 1080×1920, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
+| **Reel 3** | Alani Nu: Cotton Candy, Purple Cotton Candy, Witch's Brew, Hawaiian Shaved Ice, Orange Kiss, Cherry Slush, Breezeberry, Cosmic Stardust, Watermelon Wave, with a "2 FOR $5.99 BEFORE TAXES" price label on every frame | 27.75 s @ 60 fps | `output/reel3/Ezy_Pzy_Alani_Nu_2_for_5.99_Reel.mp4`, `output/reel3/storyboard.jpg` |
+
+Reels 1 and 2 are, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
 
 ---
 
@@ -156,3 +158,30 @@ python3 src/reel2_render.py --test 3.5,8.0   # preview single frames into output
 - **Sound** (`src/storefront_audio.py`): original and synthesized. It has night ambience and a pad, a build-up and aerial whooshes during the approach, an impact on the reveal, and a warm ending.
 
 The source resolution limits sharpness: the storefront is about 360 px wide in the original, so the hero shot is softer than native 1080p. A real drone clip (ideally at golden hour), or a higher-resolution 4K phone video, would remove both limits.
+
+
+---
+
+## Reel 3: Alani Nu, 2 FOR $5.99 (`src/reel3_render.py`, 160 BPM, 6 beats = 2.25 s per drink, 60 fps)
+
+| Time | Scene | Visuals | Transition out |
+|---|---|---|---|
+| 0.00–3.00 | **Intro** | Dark stage; light sweeps reveal the first can during a push-in; "ICE COLD." / "UNBEATABLE" / "DEALS." slam in on three bass hits; energy gathers behind the can | Bass drop |
+| 3.00–5.25 | **Cotton Candy** | Pink + teal liquid explosion in slow motion, shockwave, foreground drops, close-up, can crack | Purple/teal liquid wave |
+| 5.25–7.50 | **Purple Cotton Candy** | Carnival string lights chasing, confetti | Vertical whip up |
+| 7.50–9.75 | **Witch's Brew** | Green cauldron glow, rising bubbles, purple smoke, orbiting embers | Green smoke wipe |
+| 9.75–12.00 | **Hawaiian Shaved Ice** | Ice cubes landing on the beat, cold mist, frost sparkles | Vertical whip down |
+| 12.00–14.25 | **Orange Kiss** | Sunburst rays, orange/coral splash, fizz | Sun-flare burst |
+| 14.25–16.50 | **Cherry Slush** | Teal lightning on the beat, red sparks | Blue liquid wave |
+| 16.50–18.75 | **Breezeberry** | Slow-motion blue droplets, frost | Hyperspace warp flash |
+| 18.75–21.00 | **Cosmic Stardust** | Warp streaks into a starfield and nebula, orbiting stardust | Vertical whip up |
+| 21.00–23.25 | **Watermelon Wave** | Pink/teal splash, can crack | Flash + whip |
+| 23.25–27.75 | **End card** | Store logo, 📍 153 Great Northern Rd, Sault Ste. Marie, ON P6B 4Y9, "2 FOR $5.99 / BEFORE TAXES" (lands on a hit), and "STOP BY & GRAB YOUR FAVOURITES!" | Final hit, fade |
+
+**Price label:** a red retail tag in the left margin reading "2 FOR / $5.99 / BEFORE TAXES", composited last on every frame, intro and end card included. It pulses with the beat and gets a shine sweep every 3 s. The layout guarantees no can ever touches it: close-ups are framed right of centre, all whips are vertical, and camera shake is mostly vertical. The build was verified on the decoded MP4: the label was intact in all 1,665 frames, and the closest any can came was 21 px from its edge.
+
+**Photos:** fruit, ice and splashes sit in front of the cans, so each photo is used as a 2.5D plate. The packaging is untouched, a matte lets effects pass behind the can, and `src/reel2_prep.py reel3 --robust` measures each can from its straight edges when props merge into the outline.
+
+**Audio** (`src/reel3_audio.py`): an original 160 BPM trap track with an impact on every reveal and sound design matched to each scene (splash, can crack, fizz, carnival chimes, cauldron bubbles, ice clinks, thunder and zaps, warp riser, sparkles). It's mastered to −10.7 LUFS with a −1.0 dBTP ceiling.
+
+Rebuild everything with `./build_reel3.sh` (about 12 minutes on 4 cores).
