@@ -16,7 +16,7 @@ its own scene and only one product is ever on screen at a time.
 
 | **Reel 3** | Alani Nu: Cotton Candy, Purple Cotton Candy, Witch's Brew, Hawaiian Shaved Ice, Orange Kiss, Cherry Slush, Breezeberry, Cosmic Stardust, Watermelon Wave, with a "2 FOR $5.99 BEFORE TAXES" price label on every frame | 27.75 s @ 60 fps | `output/reel3/Ezy_Pzy_Alani_Nu_2_for_5.99_Reel.mp4`, `output/reel3/storyboard.jpg` |
 
-Reels 1 and 2 are, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
+Reels 1 and 2 are 1080×1920, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
 
 ---
 
