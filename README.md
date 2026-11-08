@@ -18,7 +18,9 @@ its own scene and only one product is ever on screen at a time.
 
 | **Reel 3, Two Locations** (latest) | Reel 3 with the price banner moved to the bottom of every frame (removed once the end card and logo appear) and both store locations on the end card | 27.75 s @ 60 fps | `output/reel3/Ezy_Pzy_Alani_Nu_2_for_5.99_Two_Locations_Reel.mp4`, `output/reel3/Two_Locations_storyboard.jpg` |
 
-| **Reel 4** (latest) | Red Bull Editions: Summer (Sudachi Lime), Ice (Iced Vanilla Berry), Yellow (Tropical), Spring (Cherry Sakura), Peach (White Peach), Red (Watermelon), Sea Blue (Juneberry), Amber (Strawberry Apricot), Pink (Wild Berries), Lilac (Grapefruit & Blossom), Winter (Pistachio & Berries), Coconut (Coconut Berry), Apple (Fuji Apple & Ginger), with the "2 FOR $5.99 BEFORE TAXES" banner and both store locations | 31.9 s @ 60 fps | `output/reel4/Ezy_Pzy_Red_Bull_2_for_5.99_Reel.mp4`, `output/reel4/storyboard.jpg` |
+| **Reel 4** | Red Bull Editions: Summer (Sudachi Lime), Ice (Iced Vanilla Berry), Yellow (Tropical), Spring (Cherry Sakura), Peach (White Peach), Red (Watermelon), Sea Blue (Juneberry), Amber (Strawberry Apricot), Pink (Wild Berries), Lilac (Grapefruit & Blossom), Winter (Pistachio & Berries), Coconut (Coconut Berry), Apple (Fuji Apple & Ginger), with the "2 FOR $5.99 BEFORE TAXES" banner and both store locations | 31.9 s @ 60 fps | `output/reel4/Ezy_Pzy_Red_Bull_2_for_5.99_Reel.mp4`, `output/reel4/storyboard.jpg` |
+
+| **Reel 5: Energy Universe** (latest) | All 13 Red Bull editions in a new futuristic/motorsport world, with a new soundtrack, a motorsport price badge on every frame, a cover image and per-can hero visuals | 31.9 s @ 60 fps | `output/reel5/Ezy_Pzy_Red_Bull_Energy_Universe_Reel.mp4`, `output/reel5/Ezy_Pzy_Red_Bull_Energy_Cover.jpg`, `output/reel5/product_visuals/`, `output/reel5/storyboard.jpg` |
 
 Reels 1 and 2 are 1080×1920, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
 
@@ -233,3 +235,45 @@ The first version's code is at commit `0b91aa3`.
 - **Audio** (`src/reel4_audio.py`): an original 160 BPM trap track. Each reveal gets an impact and crash on its beat, with scene-matched sound design: splashes, can cracks, ice clinks, chimes, bubbles, embers, wind, thunder and zaps, fire. It's mastered to −10.7 LUFS with a −2.0 dBTP peak.
 
 Rebuild with `./build_reel4.sh` (about 12 minutes on 4 cores).
+
+
+---
+
+## Reel 5: Red Bull Energy Universe (`src/reel5_*.py`, separate project, 128 BPM breakbeat techno, 60 fps)
+
+This is a completely separate project from Reel 4. It has its own assets in `assets/reel5/` (photos copied, never shared), its own cutouts, effects library (`src/reel5_fx.py`), renderer, soundtrack, output folder and build script. Reel 4 and its files are untouched.
+
+**Look:** each can is cut out of its photo (`src/reel5_prep.py`, packaging untouched) and placed in a dark, futuristic environment of its own. The previous reels' water splashes, ice and liquid waves aren't used. Every can gets exactly one bar (1.875 s): a wide reveal with HUD brackets and a decoding title, then a focus-pulled hero shot (slow push, suspended float with gentle rotation, or a parallax tracking slide), then its own exit. Every transition passes through a covered state (flash, blackout, iris, CRT dot, full defocus or full smear), so two cans never share a frame.
+
+| Bar | Edition | Environment | Entrance | Exit |
+|---|---|---|---|---|
+| intro | (Summer) | Dark chamber; streaks accelerate and an EM field forms. "UNLEASH THE ENERGY." decodes in | — | EM shockwave on the drop |
+| 1 | Summer, Sudachi Lime | Brushed-metal chamber + EM rings | Electromagnetic shockwave | Light-speed jump |
+| 2 | Ice, Iced Vanilla Berry | Supersonic speed tunnel | Tunnel deceleration | Mechanical iris shutter |
+| 3 | Yellow, Tropical | Carbon-fibre wall | Metallic shockwave out of the iris | CRT collapse |
+| 4 | Spring, Cherry Sakura | Hologram hex grid | Hologram scan materializes the can | Particle dissolve |
+| 5 | Peach, White Peach | Nebula | Particle assembly | Glitch |
+| 6 | Red, Watermelon | Racing circuit + light trails | Headlight sweep | Light-trail rush |
+| 7 | Sea Blue, Juneberry | EM ring chamber | Blue EM pulse | Energy surge |
+| 8 | Amber, Strawberry Apricot | Plasma vortex | Vortex collapse | Defocus |
+| 9 | Pink, Wild Berries | Prism beams | Refocus + RGB split | Prism flash |
+| 10 | Lilac, Grapefruit & Blossom | Tesla chamber | Arc strike | Arc whiteout |
+| 11 | Winter, Pistachio & Berries | Wind tunnel (laser streamlines) | Laser scan | Overtake smear |
+| 12 | Coconut, Coconut Berry | Zero-gravity void + hover pad | Drop-in | Power-down blackout |
+| 13 | Apple, Fuji Apple & Ginger | Jet turbine + heat shimmer | Ignition | Launch |
+| end | — | Carbon fibre + light trails | Logo scan-in, both locations decode in, chrome "2 FOR $5.99 / BEFORE TAXES", "POWER UP YOUR DAY. VISIT US TODAY!" panel | Final sub hit, fade |
+
+**Price badge:** a chamfered carbon-fibre motorsport badge with a chrome border, blue and red light strips, chrome "2 FOR **$5.99**" and blue "BEFORE TAXES". It's on every frame, end card included, at the bottom centre (y 1658–1766), and pulses on the beat. Products stay clear of it; the lowest product pixel in any frame is y 1632, 26 px above the badge.
+
+**Sound** (`src/reel5_audio.py`): a new sonic identity. All voices are new for this reel; only generic helpers like noise, filters and reverb are shared. It's a 128 BPM breakbeat with an analogue-style kick, a detuned Reese bass over a sub line, and pulse-wave arps. Sound design matched to the picture includes engine-like acceleration sweeps, Doppler fly-bys, metallic resonant hits, sub drops, low-frequency shockwaves, electrical crackle and arcs, mechanical charge-ups, an iris servo, a CRT power-down, a hologram scan, glitch bursts and an ignition. It's mastered to about −13 LUFS with a −1.5 dBTP peak, a deliberately bass-heavy balance.
+
+**Also delivered:** a vertical cover (`Ezy_Pzy_Red_Bull_Energy_Cover.jpg`) and one clean hero visual per can (`product_visuals/`, with no HUD or badge).
+
+Rebuild with `./build_reel5.sh` (about 12 minutes on 4 cores).
+
+**Verified on the decoded MP4:**
+- The badge is intact in all 1,912 frames, end card and fade-out included.
+- No frame renders more than one product.
+- All 13 editions appear in order.
+- The lowest product pixel is 26 px above the badge.
+- The audio is sample-aligned with the rendered mix.

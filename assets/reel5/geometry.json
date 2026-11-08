@@ -1,0 +1,119 @@
+{
+ "01_summer_sudachi_lime": {
+  "left": 345.0,
+  "right": 774.0,
+  "top": 123,
+  "bottom": 1191,
+  "cx": 559.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "02_ice_iced_vanilla_berry": {
+  "left": 357.0,
+  "right": 754.0,
+  "top": 103,
+  "bottom": 1176,
+  "cx": 555.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "03_yellow_tropical": {
+  "left": 355.0,
+  "right": 767.0,
+  "top": 69,
+  "bottom": 1247,
+  "cx": 561.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "04_spring_cherry_sakura": {
+  "left": 337.0,
+  "right": 765.0,
+  "top": 39,
+  "bottom": 1254,
+  "cx": 551.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "05_peach_white_peach": {
+  "left": 338.0,
+  "right": 779.0,
+  "top": 50,
+  "bottom": 1241,
+  "cx": 558.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "06_red_watermelon": {
+  "left": 336.0,
+  "right": 783.0,
+  "top": 63,
+  "bottom": 1229,
+  "cx": 559.5,
+  "w": 1122,
+  "h": 1402
+ },
+ "07_sea_blue_juneberry": {
+  "left": 347.0,
+  "right": 785.0,
+  "top": 36,
+  "bottom": 1218,
+  "cx": 566.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "08_amber_strawberry_apricot": {
+  "left": 340.0,
+  "right": 754.0,
+  "top": 87,
+  "bottom": 1195,
+  "cx": 547.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "09_pink_wild_berries": {
+  "left": 357.0,
+  "right": 787.0,
+  "top": 29,
+  "bottom": 1254,
+  "cx": 572.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "10_lilac_grapefruit_blossom": {
+  "left": 333.0,
+  "right": 789.0,
+  "top": 61,
+  "bottom": 1209,
+  "cx": 561.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "11_winter_pistachio_berries": {
+  "left": 325.0,
+  "right": 795.0,
+  "top": 38,
+  "bottom": 1185,
+  "cx": 560.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "12_coconut_berry": {
+  "left": 377.0,
+  "right": 743.0,
+  "top": 202,
+  "bottom": 1154,
+  "cx": 560.0,
+  "w": 1122,
+  "h": 1402
+ },
+ "13_apple_fuji_ginger": {
+  "left": 328.0,
+  "right": 764.0,
+  "top": 84,
+  "bottom": 1205,
+  "cx": 546.0,
+  "w": 1086,
+  "h": 1448
+ }
+}
