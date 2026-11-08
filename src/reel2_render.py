@@ -47,8 +47,9 @@ Z0 = 1.15      # photo -> screen scale for the hero framing
 
 # =========================================================== the photo plate
 class Plate:
-    def __init__(self, key, base=None, geo=None):
+    def __init__(self, key, base=None, geo=None, backdrop_gain=0.55, feather=110):
         self.key = key
+        self.feather = feather
         base = A2 if base is None else base
         geo = GEO if geo is None else geo
         img = np.asarray(Image.open(os.path.join(base, "products", key + ".png")).convert("RGB")).astype(np.float32) / 255
@@ -76,7 +77,7 @@ class Plate:
         bd = bd[y0:y0 + H, x0:x0 + W]
         small = cv2.resize(bd, (W // 8, H // 8), interpolation=cv2.INTER_AREA)
         small = cv2.GaussianBlur(small, (0, 0), 6)
-        self.backdrop = (cv2.resize(small, (W, H), interpolation=cv2.INTER_CUBIC) * 0.55).astype(np.float32)
+        self.backdrop = (cv2.resize(small, (W, H), interpolation=cv2.INTER_CUBIC) * backdrop_gain).astype(np.float32)
 
     def level(self, k):
         if k not in self.lv:
@@ -103,7 +104,7 @@ class Plate:
         # feathered plate edges (photo -> backdrop)
         x_l, y_t = cam.p(0, 0)
         x_r, y_b = cam.p(self.w, self.h)
-        fe = 110 * cam.z / Z0
+        fe = self.feather * cam.z / Z0
         yy = np.arange(H, dtype=np.float32)
         xx = np.arange(W, dtype=np.float32)
         fy = smoothstep_arr(y_t, y_t + fe, yy) * smoothstep_arr(y_b, y_b - fe, yy)

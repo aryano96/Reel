@@ -18,6 +18,8 @@ its own scene and only one product is ever on screen at a time.
 
 | **Reel 3, Two Locations** (latest) | Reel 3 with the price banner moved to the bottom of every frame (removed once the end card and logo appear) and both store locations on the end card | 27.75 s @ 60 fps | `output/reel3/Ezy_Pzy_Alani_Nu_2_for_5.99_Two_Locations_Reel.mp4`, `output/reel3/Two_Locations_storyboard.jpg` |
 
+| **Reel 4** (latest) | Red Bull Editions: Summer (Sudachi Lime), Ice (Iced Vanilla Berry), Yellow (Tropical), Spring (Cherry Sakura), Peach (White Peach), Red (Watermelon), Sea Blue (Juneberry), Amber (Strawberry Apricot), Pink (Wild Berries), Lilac (Grapefruit & Blossom), Winter (Pistachio & Berries), Coconut (Coconut Berry), Apple (Fuji Apple & Ginger), with the "2 FOR $5.99 BEFORE TAXES" banner and both store locations | 31.9 s @ 60 fps | `output/reel4/Ezy_Pzy_Red_Bull_2_for_5.99_Reel.mp4`, `output/reel4/storyboard.jpg` |
+
 Reels 1 and 2 are 1080×1920, 30 fps, H.264 High at about 12–15 Mbps, yuv420p, with AAC 320 kbps / 48 kHz stereo audio and faststart. Each is under 50 MB.
 
 ---
@@ -196,3 +198,38 @@ Rebuild everything with `./build_reel3.sh` (about 12 minutes on 4 cores).
 - **Verified on the decoded MP4:** the banner is intact in all 1,395 frames before the end card and absent in every frame from the logo onward. The lowest can base is at y 1622, 24 px above the banner. All nine drinks appear one at a time, and the soundtrack is identical to the first version.
 
 The first version's code is at commit `0b91aa3`.
+
+
+---
+
+## Reel 4: Red Bull Editions, 2 FOR $5.99 (`src/reel4_render.py`, 160 BPM, 5 beats = 1.875 s per drink, 60 fps)
+
+| Start | Drink | Look | Transition out |
+|---|---|---|---|
+| 0.0 | **Intro** | Dark stage; light sweeps reveal the Summer Edition during a push-in; "ICE COLD." / "UNBEATABLE" / "DEALS." slam in on three bass hits | Bass drop |
+| 3.0 | **Summer**, Sudachi Lime | Sun rays, lime/yellow liquid explosion, foreground drops, can crack | Lime → ice liquid wave |
+| 4.9 | **Ice**, Iced Vanilla Berry | Ice cubes land on the beat, cold mist, frost | Whip left |
+| 6.8 | **Yellow**, Tropical | Golden sunburst, gold splash, bubbles | Sun-flare burst |
+| 8.6 | **Spring**, Cherry Sakura | Falling sakura petals, cherry/pink splash | Petal storm |
+| 10.5 | **Peach**, White Peach | Zoom-in reveal, rising bubbles, soft glow | Whip right |
+| 12.4 | **Red**, Watermelon | Red/green splash | Red → blue liquid wave |
+| 14.3 | **Sea Blue**, Juneberry | Underwater bubbles, caustic light rays | Hyperspace warp |
+| 16.1 | **Amber**, Strawberry Apricot | Rising embers, orange/red splash | Whip left |
+| 18.0 | **Pink**, Wild Berries | Berry confetti, pink splash | Magenta smoke wipe |
+| 19.9 | **Lilac**, Grapefruit & Blossom | Purple smoke, falling blossoms | Zoom-through flash |
+| 21.8 | **Winter**, Pistachio & Berries | Snowfall, green/magenta splash | Green → ice liquid wave |
+| 23.6 | **Coconut**, Coconut Berry | Blue lightning on the beat, sparks, frost | Whip left |
+| 25.5 | **Apple**, Fuji Apple & Ginger | Flames, embers, red/gold splash, can crack | Flash + whip up |
+| 27.4 | **End card** | Store logo, both locations, "2 FOR $5.99 / BEFORE TAXES", "STOP BY & GRAB YOUR FAVOURITES!" | Final hit, fade |
+
+- **Shot pattern:** each drink gets a full-can shot, a hero close-up and a return to the full can. Its flavour name and "RED BULL • THE … EDITION" appear over the first shot. The opening camera move alternates between push-in, pull-out, sideways drift and rise.
+- **Price banner:** the same bottom banner as Reel 3's Two Locations version. It's on every frame until the end card and slides out before the logo appears.
+- **Verified on the decoded MP4:**
+  - The banner is intact in all 1,642 frames before the end card and absent from the logo onward.
+  - The lowest can base is 24 px above the banner.
+  - All 13 drinks appear, one per frame, in the photo order.
+  - The audio is sample-aligned with the rendered mix.
+- **Photos:** `src/reel2_prep.py reel4 --robust --isnet-fill`. The `--isnet-fill` option recovers the can body where the main model misses it, as with the pink can on a pink backdrop. Plates use a softer, brighter blend at the photo edges (`backdrop_gain`, `feather` options on `Plate`; Reels 2 and 3 keep their defaults and still reproduce pixel-identical).
+- **Audio** (`src/reel4_audio.py`): an original 160 BPM trap track. Each reveal gets an impact and crash on its beat, with scene-matched sound design: splashes, can cracks, ice clinks, chimes, bubbles, embers, wind, thunder and zaps, fire. It's mastered to −10.7 LUFS with a −2.0 dBTP peak.
+
+Rebuild with `./build_reel4.sh` (about 12 minutes on 4 cores).

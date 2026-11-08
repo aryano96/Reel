@@ -16,6 +16,8 @@ from rembg import remove, new_session
 import sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 REEL = sys.argv[1] if len(sys.argv) > 1 else "reel2"      # e.g. "reel3"
+ISNET_FILL = "--isnet-fill" in sys.argv   # also fill the can body from ISNet inside the can column
+                                          # (for low-contrast photos, e.g. a pink can on a pink backdrop)
 ROBUST = "--robust" in sys.argv   # measure the can as the solid column through the photo centre and keep
                                   # only props near its base in the matte (splashes touching the can are dropped)
 SRC = os.path.join(ROOT, "assets", REEL, "products")
@@ -61,6 +63,10 @@ for f in sorted(glob.glob(os.path.join(SRC, "*.png"))):
             L = float(xl[np.argmax(prof[xl])])
             R = float(xr[np.argmax(prof[xr])])
         cw = R - L
+        if ISNET_FILL:
+            colm = np.zeros_like(core)
+            colm[:, int(L) + 6:int(R) - 5] = True
+            core = core | ((a_is > 0.5) & colm)
         c0, c1 = int(L + 0.2 * cw), int(R - 0.2 * cw)
         solid = core[:, c0:c1].mean(1) > 0.9
         top = int(np.argmax(solid))
@@ -78,6 +84,10 @@ for f in sorted(glob.glob(os.path.join(SRC, "*.png"))):
         col[:, int(L) - 12:int(R) + 13] = 1
         keep_zone = np.maximum(col, (np.arange(h)[:, None] > bottom - 300).astype(np.float32))
         m = m * cv2.GaussianBlur(keep_zone, (0, 0), 4)
+        if ISNET_FILL:
+            body = np.zeros((h, w), np.float32)
+            body[max(0, top - 4):bottom + 5, int(L) + 2:int(R) - 1] = 1
+            m = np.maximum(m, np.clip((a_is - 0.25) / 0.5, 0, 1) * cv2.GaussianBlur(body, (0, 0), 2))
     m = np.maximum(m, props)
     # drop specks
     b = (m > 0.4).astype(np.uint8)
